@@ -65,15 +65,6 @@ void FPTree::AddNodeLink(FPNode* node)
         while ((sibling = prev->GetSibling())) {
             prev = sibling;
         }
-        
-        if (prev == node)
-        {
-            std::cout << "prev is equal to node!!!" << std::endl;
-        }else
-        {
-            std::cout << "prev is NOT equal to node!!!" << std::endl;
-        }
-        
         prev->SetSibling(node);
     }
 }
@@ -93,9 +84,6 @@ void FPTree::PrintTree()
             //std::cout << "Parent: " << cur.first->GetName() << " Child: " << child->GetName() << std::endl; 
             s.push({child, cur.second + " "});
         }
-        std::string temp = cur.second + cur.first->GetName();
-        temp += ": ";
-
-        std::cout <<  cur.second << cur.first->GetCount() << ":" << cur.first->GetName() << std::endl;
+        std::cout <<  cur.second  << cur.first->GetName() << ":" << cur.first->GetCount() << std::endl;
     }
 }

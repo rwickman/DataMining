@@ -14,7 +14,7 @@ namespace fs = std::experimental::filesystem;
 
 //const int NUM_TOPICS = 5;
 //const int MIN_SUPPORT = 400;
-const int NUM_TOPICS = 1;
+const int NUM_TOPICS = 2;
 const int MIN_SUPPORT = 1;
 
 // The suport and support order idx
@@ -32,6 +32,10 @@ std::unordered_map<int, std::string> read_vocab(std::fstream& vocab_file)
         std::string line;
         while(std::getline(vocab_file, line))
         {
+            // Remove extra \r create by Windows file
+            if(line.back() == '\r')
+                line.pop_back();
+
             // Split the line
             size_t pos;
             if ((pos = line.find("\t")) != std::string::npos)
@@ -43,13 +47,19 @@ std::unordered_map<int, std::string> read_vocab(std::fstream& vocab_file)
      return vocab_map;
  }
 
-void read_topic(std::fstream& topic_file, std::vector<std::vector<int>>& topic)
+std::vector<std::vector<int>> read_topic(std::fstream& topic_file)
 {
+    std::vector<std::vector<int>> topic;
     if (topic_file.is_open())
     {
         std::string line;
         while(std::getline(topic_file, line))
         {
+            // Remove extra \r create by Windows file
+            if(line.back() == '\r')
+                line.pop_back();
+
+            //std::cout << line << std::endl;
             std::vector<int> trans;
             size_t pos = 0;
             size_t prev_pos = 0;
@@ -57,7 +67,7 @@ void read_topic(std::fstream& topic_file, std::vector<std::vector<int>>& topic)
             // Get all integers in this line
             while ((pos = line.find(" ",  prev_pos)) != std::string::npos)
             {
-                sub = line.substr(prev_pos, pos-prev_pos); 
+                sub = line.substr(prev_pos, pos-prev_pos);
                 //std::cout << "Item Index: " << sub << std::endl;
                 trans.push_back(std::stoi(sub));
                 prev_pos = pos + 1;
@@ -66,6 +76,7 @@ void read_topic(std::fstream& topic_file, std::vector<std::vector<int>>& topic)
             topic.push_back(trans);
         }
     }
+    return topic;
 }
 
 void get_support(std::vector<std::vector<int>>& topic, 
@@ -135,9 +146,8 @@ std::vector<std::vector<std::string>> create_freq_trans(
 
 int main()
 {
-
-    std::cout << "Hello" << std::endl;
-    fs::path data_dir = fs::current_path() / "temp_data";
+    fs::path data_dir = fs::current_path() / "test_data";
+    //fs::path data_dir = fs::current_path() / "data";
     std::cout << data_dir << std::endl;
     std::fstream datafile;
     std::vector<std::vector<int>> topics[NUM_TOPICS];
@@ -156,7 +166,7 @@ int main()
             vocab_map = read_vocab(datafile);
             // for (auto& pair : vocab_map)
             // {
-            //     std::cout << pair.first << ": " << pair.second << std::endl; 
+            //     std::cout << pair.first << ":" << pair.second << std::endl; 
             // }
         }
         else
@@ -165,7 +175,8 @@ int main()
             if ((pos = filename.find("-")) != std::string::npos)
             {
                 std::cout << "NUMBER: " << std::stoi(filename.substr(pos+1, 1)) << std::endl;
-                read_topic(datafile, topics[std::stoi(filename.substr(pos+1, 1))]);
+                topics[std::stoi(filename.substr(pos+1, 1))] = read_topic(datafile);
+                //for (auto& )
             }
         }
         datafile.close();
@@ -190,7 +201,7 @@ int main()
                 {
                     if (l.second != r.second)
                         return l.second > r.second;
-                    return l.first > r.first; 
+                    return l.first < r.first; 
                 });
 
         std::unordered_map<std::string, support_order> sort_idx_map = create_sort_idx_map(vec);
@@ -202,19 +213,18 @@ int main()
             fptree.InsertItemset(trans);
         }
         fptree.PrintTree();
-        break;
+        //break;
         // Get the 
         // int k = 0;
         // for (std::pair<std::string, int>& pair: vec) {
-        //     std::cout << pair.first << std::endl;
-		//     std::cout << pair.second << std::endl;
+        //     std::cout << pair.second << " " << pair.first << " asdf" << std::endl;
         //     k++;
         //     if (k > 100)
         //     {
         //         break;
         //     }
         // }
-        // break;
+        break;
 
     }
 }
