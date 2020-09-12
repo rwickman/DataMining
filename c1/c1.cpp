@@ -7,15 +7,19 @@
 #include <map>
 #include <algorithm>
 #include <experimental/filesystem>
+#include <queue>
+#include <unordered_set>
+#include <algorithm>
 
 #include "fptree.h"
 
 namespace fs = std::experimental::filesystem;
+using Pattern = std::vector<std::vector<std::string>>; 
 
 //const int NUM_TOPICS = 5;
 //const int MIN_SUPPORT = 400;
 const int NUM_TOPICS = 2;
-const int MIN_SUPPORT = 1;
+const int MIN_SUPPORT = 2;
 
 // The suport and support order idx
 struct support_order
@@ -23,6 +27,7 @@ struct support_order
     int support;
     int idx;  
 };
+
 
 std::unordered_map<int, std::string> read_vocab(std::fstream& vocab_file)
  {
@@ -104,6 +109,7 @@ void get_support(std::vector<std::vector<int>>& topic,
 std::unordered_map<std::string, support_order> create_sort_idx_map(
     std::vector<std::pair<std::string, int>> sorted_items)
 {
+    // Create a map from every item to its' support order and support
     std::unordered_map<std::string, support_order> sort_idx_map;
     for (int i = 0; i < sorted_items.size(); ++i)
     {
@@ -119,6 +125,7 @@ std::vector<std::vector<std::string>> create_freq_trans(
     std::unordered_map<int, std::string> vocab_map,
     std::unordered_map<std::string, support_order> sort_idx_map)
 {
+    /* Create set of frequent items from every transactions */
     std::vector<std::vector<std::string>> freq_trans;
     for (auto& itemset : topic)
     {
@@ -130,6 +137,7 @@ std::vector<std::vector<std::string>> create_freq_trans(
                 trans.push_back({sort_idx_map[vocab_map[el]].idx, vocab_map[el]});
             }
         }
+        // If there was at least one item that is frequent in this transaction
         if (trans.size() > 0)
         {
             std::sort(trans.begin(), trans.end());
@@ -143,6 +151,156 @@ std::vector<std::vector<std::string>> create_freq_trans(
     }
     return freq_trans;
 }
+
+std::queue<FPNode*> get_leaf_nodes(FPTree& fptree,  std::unordered_set<std::string>& nodes_seen)
+{
+    // Get the leaf nodes from an FPTree
+    std::queue<FPNode*> leaf_nodes;
+    for (std::pair<std::string, FPNode*> node_pair : fptree.GetNodeLinks())
+    {
+        if (node_pair.second->GetChildren().size() <= 0)
+        {
+            leaf_nodes.push(node_pair.second);
+            nodes_seen.insert(node_pair.first);
+        }
+    }
+    return leaf_nodes;
+}
+
+Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
+{
+    // Recursively create patterns
+    std::string prefix;
+    for (const auto& p : cur_prefix) prefix += p + " ";
+    std::cout << "PREFIX: " << prefix << std::endl;
+    
+    // The conditional support
+    std::unordered_map<std::string, int> cond_sup;
+ 
+    // All the conditional transactions
+    std::vector<std::vector<std::string>> cond_trans;
+
+    // Get the prefix paths
+    FPNode* cur_leaf_node = cur_node;
+    while (cur_leaf_node)
+    {
+        std::vector<std::string> cur_trans;
+        FPNode* cur_prefix_node = cur_leaf_node->GetParent();
+        // Traverse the tree from this node to root, but also skipping root
+        while(cur_prefix_node && cur_prefix_node->GetParent())
+        { 
+            cur_trans.push_back(cur_prefix_node->GetName());
+            cond_sup[cur_prefix_node->GetName()] += cur_leaf_node->GetCount();
+            cur_prefix_node = cur_prefix_node->GetParent();
+        }
+        if (!cur_trans.empty())
+            cond_trans.push_back(cur_trans);
+        cur_leaf_node = cur_leaf_node->GetSibling();
+    }
+
+    // The conditionally frequent items
+    std::vector<std::string> cond_freq_items;
+
+    // Remove nodes that do not have a minimum support
+    for(auto& cond_sup_pair: cond_sup)
+    {
+        // Check if item meets minimum support
+        if(cond_sup_pair.second < MIN_SUPPORT)
+        {
+            // Remove this item from all the conditional transactions
+            for(int i = 0; i < cond_trans.size(); ++i)
+            {
+                //std::cout << "Erasing " << cond_sup_pair.first << " " << cond_sup_pair.second << std::endl;
+                cond_trans[i].erase(std::remove(cond_trans[i].begin(), cond_trans[i].end(), cond_sup_pair.first));
+                // If this removal made the transcation empty remove this as well
+                if (cond_trans[i].empty())
+                {
+                    cond_trans.erase(cond_trans.begin() + i);
+                }
+            }
+        }
+        else
+        {
+            cond_freq_items.push_back(cond_sup_pair.first);
+        }
+    }
+    
+
+    // The total conditional patterns including this prefix
+    Pattern cond_patterns;
+    cond_patterns.push_back(cur_prefix);
+
+    // The conditional patterns
+    if (!cond_trans.empty())
+    {
+        for(std::string& item_name : cond_freq_items)
+        {
+            // Copy the current prefix
+            std::vector<std::string> cond_prefix(cur_prefix);
+            
+            // Prepend the item name to prefix
+            cond_prefix.insert(cond_prefix.begin(), item_name);
+
+            // Create FP-Tree from all the conditional transactions, conditioned on cond_prefix
+            FPTree cond_fptree;
+            for(int i = 0; i < cond_trans.size(); ++i)
+            {
+                // Add subset of transaction if it contains element
+                std::vector<std::string>::iterator it = std::find(cond_trans[i].begin(), cond_trans[i].end(), item_name);
+                if (it != cond_trans[i].end() && it != cond_trans[i].end() - 1)
+                {
+                    std::vector<std::string> cond_prefix_subset(it, cond_trans[i].end());
+                    // Reverse so they are added in the correct order
+                    std::reverse(cond_prefix_subset.begin(), cond_prefix_subset.end());
+                    cond_fptree.InsertItemset(cond_prefix_subset);
+                }
+            }
+            //cond_fptree.PrintTree();
+            Pattern cond_prefix_pattern = create_patterns(cond_fptree.GetNodeLink(item_name), cond_prefix);
+            cond_patterns.insert(cond_patterns.end(), cond_prefix_pattern.begin(), cond_prefix_pattern.end());
+        }
+    }
+    return cond_patterns;
+}
+
+Pattern fp_growth(FPTree& fptree)
+{
+    // Nodes previously added to the queue 
+    std::unordered_set<std::string> nodes_seen;
+    
+    // Nodes to be visited
+    std::queue<FPNode*> node_queue = get_leaf_nodes(fptree, nodes_seen);
+    
+    Pattern total_freq_itemsets;
+
+    while(node_queue.size() > 0)
+    {
+        FPNode* cur_node = node_queue.front();
+        node_queue.pop();
+
+        // Add all the parents of this node (and its siblings) to node_queue
+        FPNode* sib_node = cur_node;
+        while(sib_node)
+        {
+            // If the parent of this nodes is not the root
+            if (sib_node->GetParent()->GetParent())
+            {
+                std::string parent_name = sib_node->GetParent()->GetName();
+                // Only add if not added to the queue before and not the root node
+                if (nodes_seen.find(parent_name) == nodes_seen.end())
+                {
+                    nodes_seen.insert(parent_name);
+                    node_queue.push(sib_node->GetParent());
+                }
+            }
+            sib_node = sib_node->GetSibling();
+        }
+        Pattern patterns = create_patterns(cur_node, {cur_node->GetName()});
+        total_freq_itemsets.insert(total_freq_itemsets.end(), patterns.begin(), patterns.end());
+    }
+    return total_freq_itemsets;
+}
+
 
 int main()
 {
@@ -206,25 +364,45 @@ int main()
 
         std::unordered_map<std::string, support_order> sort_idx_map = create_sort_idx_map(vec);
         std::vector<std::vector<std::string>> freq_trans = create_freq_trans(topics[i], vocab_map, sort_idx_map);
+        
+        // Construct the FP-tree
         FPTree fptree;
         for (std::vector<std::string>& trans : freq_trans)
         {
-            //std::cout << "Inserting item" << std::endl;
             fptree.InsertItemset(trans);
         }
+
+        // Print out the FP-tree
         fptree.PrintTree();
+        
+        Pattern total_freq_itemsets = fp_growth(fptree);
+        std::cout << total_freq_itemsets.size() << std::endl;
+        break;
+        // for (auto& pattern : total_freq_itemsets)
+        // {
+        //     std::string joined_pat = "";
+        //     for(std::string& item : pattern)
+        //     {
+        //         joined_pat += item + " ";
+        //     }
+        //     std::cout << joined_pat << std::endl;
+        // }
+
+            // 
         //break;
         // Get the 
         // int k = 0;
         // for (std::pair<std::string, int>& pair: vec) {
-        //     std::cout << pair.second << " " << pair.first << " asdf" << std::endl;
+        //     std::cout << pair.second << " " << pair.first << std::endl;
         //     k++;
-        //     if (k > 100)
-        //     {
-        //         break;
-        //     }
+            // if (k > 100)
+            // {
+            //     break;
+            // }
         // }
-        break;
+        
+        // break;
+        //sort_idx_map;
 
     }
 }

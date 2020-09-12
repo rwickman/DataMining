@@ -4,7 +4,7 @@
 class FPNode
 {
 public:
-    FPNode() : sibling(nullptr), count(0) { }
+    FPNode() : sibling(nullptr), parent(nullptr), count(0) { }
     FPNode(std::string name);
 
     // Get the name of this node
@@ -13,10 +13,10 @@ public:
     // Increment the count of this node
     void IncCount();
     
-    // Get the count of the node
+    // Get the count (i.e., relative frequency) of thjs node
     int GetCount();
 
-    // Get sibling
+    // Get sibling of this node
     FPNode* GetSibling();
 
     // Set the sibling of this node
@@ -31,9 +31,15 @@ public:
     // Get the child with name if it exists
     FPNode* GetChild(std::string child_name);
     
+    // Get the parent node
+    FPNode* GetParent();
+
+
 private:
     std::string name;
     unsigned int count;
     FPNode* sibling;
+    FPNode* parent;
     std::vector<FPNode*> children;
+
 };

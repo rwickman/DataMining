@@ -1,7 +1,7 @@
 #include "fpnode.h"
 
 
-FPNode::FPNode(std::string name) : name(name), sibling(nullptr), count(0) {}
+FPNode::FPNode(std::string name) : name(name), sibling(nullptr), parent(nullptr), count(0) {}
 
 std::string FPNode::GetName()
 {
@@ -36,11 +36,10 @@ std::vector<FPNode*>& FPNode::GetChildren()
 FPNode* FPNode::AddChild(std::string child_name)
 {
     FPNode* child_node = new FPNode(child_name);
-    
+    child_node->parent = this;
     child_node->IncCount();
     children.push_back(child_node);
 
-    // TODO: Your problem is creating a pointer to an element in a vector
     return child_node;
 }
 
@@ -56,3 +55,7 @@ FPNode* FPNode::GetChild(std::string child_name)
     return nullptr;
 }
 
+FPNode* FPNode::GetParent()
+{
+    return parent;
+}

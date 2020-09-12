@@ -69,9 +69,19 @@ void FPTree::AddNodeLink(FPNode* node)
     }
 }
 
+std::unordered_map<std::string, FPNode*>& FPTree::GetNodeLinks()
+{
+    return node_links;
+}
+
+FPNode* FPTree::GetNodeLink(std::string node_name)
+{
+    return node_links[node_name];
+}
+
 void FPTree::PrintTree()
 {
-    // Uses DFS to print out the FPTree
+    // Uses DFS to print out the FP-tree
     std::stack<std::pair<FPNode*, std::string>> s;
     s.push({&root_node, ""});
     std::pair<FPNode*, std::string> cur;

@@ -16,6 +16,10 @@ public:
 
     void AddNodeLink(FPNode* node);
 
+    std::unordered_map<std::string, FPNode*>&  GetNodeLinks();
+    
+    FPNode* GetNodeLink(std::string);
+
     void PrintTree();
 
 
