@@ -14,7 +14,7 @@
 #include "fptree.h"
 
 namespace fs = std::experimental::filesystem;
-using Pattern = std::vector<std::vector<std::string>>; 
+
 
 //const int NUM_TOPICS = 5;
 //const int MIN_SUPPORT = 400;
@@ -28,6 +28,17 @@ struct support_order
     int idx;  
 };
 
+struct FreqItemset
+{
+    std::vector<std::string> items;
+    int support;
+    bool operator<(const FreqItemset& itemset) const
+    {
+        return support < itemset.support;
+    }
+};
+
+using Pattern = std::vector<FreqItemset>; 
 
 std::unordered_map<int, std::string> read_vocab(std::fstream& vocab_file)
  {
@@ -169,10 +180,14 @@ std::queue<FPNode*> get_leaf_nodes(FPTree& fptree,  std::unordered_set<std::stri
 
 Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
 {
+
+    std::string pref;
+    for(auto& s : cur_prefix) pref += s + " ";
+    std::cout <<"PREFIX: " << pref << std::endl;
+
     // Recursively create patterns
     std::string prefix;
     for (const auto& p : cur_prefix) prefix += p + " ";
-    std::cout << "PREFIX: " << prefix << std::endl;
     
     // The conditional support
     std::unordered_map<std::string, int> cond_sup;
@@ -204,6 +219,8 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
     // Remove nodes that do not have a minimum support
     for(auto& cond_sup_pair: cond_sup)
     {
+
+        std::cout << cond_sup_pair.first << ": " << cond_sup_pair.second << std::endl; 
         // Check if item meets minimum support
         if(cond_sup_pair.second < MIN_SUPPORT)
         {
@@ -228,7 +245,19 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
 
     // The total conditional patterns including this prefix
     Pattern cond_patterns;
-    cond_patterns.push_back(cur_prefix);
+    
+    // Get total current node frequency
+    FPNode* sib_node = cur_node;
+    int total_freq = 0;
+    while(sib_node)
+    {
+        total_freq += sib_node->GetCount();
+        sib_node = sib_node->GetSibling();
+    }
+    std::cout << "CUR NODE: " << cur_node->GetName() << " " << total_freq << " VS " << cur_node->GetCount()<< std::endl;
+
+    FreqItemset freq_itemset = {cur_prefix, total_freq};
+    cond_patterns.push_back(freq_itemset);
 
     // The conditional patterns
     if (!cond_trans.empty())
@@ -247,17 +276,24 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
             {
                 // Add subset of transaction if it contains element
                 std::vector<std::string>::iterator it = std::find(cond_trans[i].begin(), cond_trans[i].end(), item_name);
-                if (it != cond_trans[i].end() && it != cond_trans[i].end() - 1)
+                if (it != cond_trans[i].end())
                 {
                     std::vector<std::string> cond_prefix_subset(it, cond_trans[i].end());
                     // Reverse so they are added in the correct order
                     std::reverse(cond_prefix_subset.begin(), cond_prefix_subset.end());
+                    
+                    // PROBLEM IS RIGHT HERE, YOU ARE NOT SETTING THE COUNTS CORRECT (count defaults to 1)
+                    // NEED TO UPDATE THE COUNTS TO BE CORRECT HERE
                     cond_fptree.InsertItemset(cond_prefix_subset);
                 }
             }
-            //cond_fptree.PrintTree();
-            Pattern cond_prefix_pattern = create_patterns(cond_fptree.GetNodeLink(item_name), cond_prefix);
-            cond_patterns.insert(cond_patterns.end(), cond_prefix_pattern.begin(), cond_prefix_pattern.end());
+            // TODO: NEED TO FIX COST NOT CORRECT IN COND TREE
+            cond_fptree.PrintTree();
+            if (FPNode* next_node = cond_fptree.GetNodeLink(item_name))
+            {
+                Pattern cond_prefix_pattern = create_patterns(next_node, cond_prefix);
+                cond_patterns.insert(cond_patterns.end(), cond_prefix_pattern.begin(), cond_prefix_pattern.end());
+            }
         }
     }
     return cond_patterns;
@@ -301,6 +337,26 @@ Pattern fp_growth(FPTree& fptree)
     return total_freq_itemsets;
 }
 
+void write_patterns(Pattern total_freq_itemsets, std::string out_filename)
+{
+    std::ofstream out_file;
+    out_file.open(out_filename);
+    for (int i = total_freq_itemsets.size()-1; i >= 0 ; --i)
+    {
+        FreqItemset is = total_freq_itemsets[i];
+        out_file << is.support << " ";
+        for (int j = 0; j < is.items.size(); ++j)
+        {
+            out_file << is.items[j];
+            if (j < is.items.size() - 1)
+            {
+                out_file << " ";
+            }
+        }
+        if (i != 0)
+            out_file << "\n";
+    } 
+}
 
 int main()
 {
@@ -322,10 +378,6 @@ int main()
         if (filename.find("vocab") != std::string::npos)
         {
             vocab_map = read_vocab(datafile);
-            // for (auto& pair : vocab_map)
-            // {
-            //     std::cout << pair.first << ":" << pair.second << std::endl; 
-            // }
         }
         else
         {
@@ -373,36 +425,23 @@ int main()
         }
 
         // Print out the FP-tree
-        fptree.PrintTree();
+        //fptree.PrintTree();
         
         Pattern total_freq_itemsets = fp_growth(fptree);
         std::cout << total_freq_itemsets.size() << std::endl;
-        break;
-        // for (auto& pattern : total_freq_itemsets)
-        // {
-        //     std::string joined_pat = "";
-        //     for(std::string& item : pattern)
-        //     {
-        //         joined_pat += item + " ";
-        //     }
-        //     std::cout << joined_pat << std::endl;
-        // }
 
-            // 
-        //break;
-        // Get the 
-        // int k = 0;
-        // for (std::pair<std::string, int>& pair: vec) {
-        //     std::cout << pair.second << " " << pair.first << std::endl;
-        //     k++;
-            // if (k > 100)
-            // {
-            //     break;
-            // }
+        // Sort the itemsets by support count
+        std::sort(total_freq_itemsets.begin(), total_freq_itemsets.end());
+        // for (auto& is: total_freq_itemsets)
+        // {
+        //     std::string item_str = std::to_string(is.support);
+        //     for(auto& item : is.items)
+        //     {
+        //         item_str += " " + item;
+        //     }
+        //     std::cout << item_str << std::endl;
         // }
         
-        // break;
-        //sort_idx_map;
-
+        write_patterns(total_freq_itemsets, fs::current_path() / ("output/pattern-" + std::to_string(i) + ".txt"));
     }
 }
