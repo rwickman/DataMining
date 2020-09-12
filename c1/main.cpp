@@ -345,7 +345,7 @@ void write_patterns(Pattern total_freq_itemsets, std::string out_filename)
     for (int i = total_freq_itemsets.size()-1; i >= 0 ; --i)
     {
         FreqItemset is = total_freq_itemsets[i];
-        out_file << is.support << " ";
+        out_file << is.support << "\t";
         for (int j = 0; j < is.items.size(); ++j)
         {
             out_file << is.items[j];
