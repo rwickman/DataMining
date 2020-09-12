@@ -13,6 +13,11 @@ void FPNode::IncCount()
     count++;
 }
 
+void FPNode::AddCount(int freq)
+{
+    count += freq;
+}
+
 int FPNode::GetCount()
 {
     return count;
@@ -33,11 +38,11 @@ std::vector<FPNode*>& FPNode::GetChildren()
     return children;
 }
 
-FPNode* FPNode::AddChild(std::string child_name)
+FPNode* FPNode::AddChild(std::string child_name, int init_count)
 {
     FPNode* child_node = new FPNode(child_name);
     child_node->parent = this;
-    child_node->IncCount();
+    child_node->AddCount(init_count);
     children.push_back(child_node);
 
     return child_node;

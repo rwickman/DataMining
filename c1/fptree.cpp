@@ -8,7 +8,7 @@
 
 // }
 
-void FPTree::InsertItemset(std::vector<std::string>& itemset)
+void FPTree::InsertItemset(std::vector<std::string>& itemset, int init_count)
 {
     // Need to iterate over tree and incrementing the count until
     // a node is not found. Then, a new path of FPNodes needs to be created
@@ -24,7 +24,7 @@ void FPTree::InsertItemset(std::vector<std::string>& itemset)
     // Increment counts of nodes that already exist in the tree
     while (next_node)
     {
-        next_node->IncCount();
+        next_node->AddCount(init_count);
         if (++cur_idx < itemset.size())
         {
             cur_node = next_node;
@@ -37,7 +37,8 @@ void FPTree::InsertItemset(std::vector<std::string>& itemset)
     // Add new nodes to the tree
     while(cur_idx < itemset.size())
     {
-        cur_node = cur_node->AddChild(itemset[cur_idx++]);
+        cur_node = cur_node->AddChild(itemset[cur_idx++], init_count);
+
         // Check if not link exists, and if it doesn't create
         // If it does, add sibling link
         AddNodeLink(cur_node);

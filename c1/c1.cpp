@@ -194,12 +194,15 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
  
     // All the conditional transactions
     std::vector<std::vector<std::string>> cond_trans;
+    std::vector<int> cond_trans_counts;
+
 
     // Get the prefix paths
     FPNode* cur_leaf_node = cur_node;
     while (cur_leaf_node)
     {
         std::vector<std::string> cur_trans;
+        std::vector<int> cur_trans_counts;
         FPNode* cur_prefix_node = cur_leaf_node->GetParent();
         // Traverse the tree from this node to root, but also skipping root
         while(cur_prefix_node && cur_prefix_node->GetParent())
@@ -210,6 +213,7 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
         }
         if (!cur_trans.empty())
             cond_trans.push_back(cur_trans);
+            cond_trans_counts.push_back(cur_leaf_node->GetCount());
         cur_leaf_node = cur_leaf_node->GetSibling();
     }
 
@@ -227,12 +231,12 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
             // Remove this item from all the conditional transactions
             for(int i = 0; i < cond_trans.size(); ++i)
             {
-                //std::cout << "Erasing " << cond_sup_pair.first << " " << cond_sup_pair.second << std::endl;
                 cond_trans[i].erase(std::remove(cond_trans[i].begin(), cond_trans[i].end(), cond_sup_pair.first));
                 // If this removal made the transcation empty remove this as well
                 if (cond_trans[i].empty())
                 {
                     cond_trans.erase(cond_trans.begin() + i);
+                    cond_trans_counts.erase(cond_trans_counts.begin() + i);
                 }
             }
         }
@@ -284,7 +288,7 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
                     
                     // PROBLEM IS RIGHT HERE, YOU ARE NOT SETTING THE COUNTS CORRECT (count defaults to 1)
                     // NEED TO UPDATE THE COUNTS TO BE CORRECT HERE
-                    cond_fptree.InsertItemset(cond_prefix_subset);
+                    cond_fptree.InsertItemset(cond_prefix_subset, cond_trans_counts[i]);
                 }
             }
             // TODO: NEED TO FIX COST NOT CORRECT IN COND TREE

@@ -10,7 +10,7 @@ public:
     FPTree() {};
 
     // Insert itemset
-    void InsertItemset(std::vector<std::string>& itemset);
+    void InsertItemset(std::vector<std::string>& itemset, int init_count=1);
 
     FPNode& GetRoot();
 
