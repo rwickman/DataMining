@@ -16,10 +16,10 @@
 namespace fs = std::experimental::filesystem;
 
 
-//const int NUM_TOPICS = 5;
-//const int MIN_SUPPORT = 400;
-const int NUM_TOPICS = 2;
-const int MIN_SUPPORT = 2;
+const int NUM_TOPICS = 5;
+const int MIN_SUPPORT = 400;
+// const int NUM_TOPICS = 2;
+// const int MIN_SUPPORT = 2;
 
 // The suport and support order idx
 struct support_order
@@ -75,7 +75,6 @@ std::vector<std::vector<int>> read_topic(std::fstream& topic_file)
             if(line.back() == '\r')
                 line.pop_back();
 
-            //std::cout << line << std::endl;
             std::vector<int> trans;
             size_t pos = 0;
             size_t prev_pos = 0;
@@ -84,7 +83,6 @@ std::vector<std::vector<int>> read_topic(std::fstream& topic_file)
             while ((pos = line.find(" ",  prev_pos)) != std::string::npos)
             {
                 sub = line.substr(prev_pos, pos-prev_pos);
-                //std::cout << "Item Index: " << sub << std::endl;
                 trans.push_back(std::stoi(sub));
                 prev_pos = pos + 1;
             }
@@ -95,24 +93,21 @@ std::vector<std::vector<int>> read_topic(std::fstream& topic_file)
     return topic;
 }
 
-void get_support(std::vector<std::vector<int>>& topic, 
-                std::map<std::string, int>& support_map,
+std::map<std::string, int> get_support(std::vector<std::vector<int>>& topic, 
                 std::unordered_map<int, std::string>& vocab_map)
 {
+    
+    std::map<std::string, int> support_map;
+    
     for (auto& itemset : topic)
     {
         for (int& el: itemset)
         {
             std::string word = vocab_map[el];
-            //std::map<std::string, int>::const_iterator got = support_map.find(word);
-            if (support_map.find(word) == support_map.end())
-            {
-                support_map[word] = 0;
-            }
             support_map[word] += 1;
-            //std::cout << word << support_map[word] << std::endl;
         }
     }
+    return support_map;
 }
 
 
@@ -180,11 +175,6 @@ std::queue<FPNode*> get_leaf_nodes(FPTree& fptree,  std::unordered_set<std::stri
 
 Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
 {
-
-    std::string pref;
-    for(auto& s : cur_prefix) pref += s + " ";
-    std::cout <<"PREFIX: " << pref << std::endl;
-
     // Recursively create patterns
     std::string prefix;
     for (const auto& p : cur_prefix) prefix += p + " ";
@@ -212,8 +202,10 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
             cur_prefix_node = cur_prefix_node->GetParent();
         }
         if (!cur_trans.empty())
+        {
             cond_trans.push_back(cur_trans);
             cond_trans_counts.push_back(cur_leaf_node->GetCount());
+        }
         cur_leaf_node = cur_leaf_node->GetSibling();
     }
 
@@ -223,20 +215,27 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
     // Remove nodes that do not have a minimum support
     for(auto& cond_sup_pair: cond_sup)
     {
-
-        std::cout << cond_sup_pair.first << ": " << cond_sup_pair.second << std::endl; 
         // Check if item meets minimum support
         if(cond_sup_pair.second < MIN_SUPPORT)
         {
             // Remove this item from all the conditional transactions
             for(int i = 0; i < cond_trans.size(); ++i)
+            {  
+                cond_trans[i].erase(std::remove(cond_trans[i].begin(), cond_trans[i].end(), cond_sup_pair.first), cond_trans[i].end());
+            }
+            
+            // Remove empty transactions
+            int cond_i = 0;
+            while(cond_i < cond_trans.size())
             {
-                cond_trans[i].erase(std::remove(cond_trans[i].begin(), cond_trans[i].end(), cond_sup_pair.first));
-                // If this removal made the transcation empty remove this as well
-                if (cond_trans[i].empty())
+                if (cond_trans[cond_i].empty())
                 {
-                    cond_trans.erase(cond_trans.begin() + i);
-                    cond_trans_counts.erase(cond_trans_counts.begin() + i);
+                    cond_trans.erase(cond_trans.begin() + cond_i);
+                    cond_trans_counts.erase(cond_trans_counts.begin() + cond_i);
+                }
+                else
+                {
+                    ++cond_i;   
                 }
             }
         }
@@ -258,8 +257,11 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
         total_freq += sib_node->GetCount();
         sib_node = sib_node->GetSibling();
     }
-    std::cout << "CUR NODE: " << cur_node->GetName() << " " << total_freq << " VS " << cur_node->GetCount()<< std::endl;
 
+    if (cur_prefix[0] == "efficient")
+    {
+        
+    }
     FreqItemset freq_itemset = {cur_prefix, total_freq};
     cond_patterns.push_back(freq_itemset);
 
@@ -277,7 +279,7 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
             // Create FP-Tree from all the conditional transactions, conditioned on cond_prefix
             FPTree cond_fptree;
             for(int i = 0; i < cond_trans.size(); ++i)
-            {
+            { 
                 // Add subset of transaction if it contains element
                 std::vector<std::string>::iterator it = std::find(cond_trans[i].begin(), cond_trans[i].end(), item_name);
                 if (it != cond_trans[i].end())
@@ -285,14 +287,10 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
                     std::vector<std::string> cond_prefix_subset(it, cond_trans[i].end());
                     // Reverse so they are added in the correct order
                     std::reverse(cond_prefix_subset.begin(), cond_prefix_subset.end());
-                    
-                    // PROBLEM IS RIGHT HERE, YOU ARE NOT SETTING THE COUNTS CORRECT (count defaults to 1)
-                    // NEED TO UPDATE THE COUNTS TO BE CORRECT HERE
                     cond_fptree.InsertItemset(cond_prefix_subset, cond_trans_counts[i]);
                 }
             }
-            // TODO: NEED TO FIX COST NOT CORRECT IN COND TREE
-            cond_fptree.PrintTree();
+            // cond_fptree.PrintTree();
             if (FPNode* next_node = cond_fptree.GetNodeLink(item_name))
             {
                 Pattern cond_prefix_pattern = create_patterns(next_node, cond_prefix);
@@ -330,7 +328,7 @@ Pattern fp_growth(FPTree& fptree)
                 if (nodes_seen.find(parent_name) == nodes_seen.end())
                 {
                     nodes_seen.insert(parent_name);
-                    node_queue.push(sib_node->GetParent());
+                    node_queue.push(fptree.GetNodeLink(sib_node->GetParent()->GetName()));
                 }
             }
             sib_node = sib_node->GetSibling();
@@ -364,16 +362,13 @@ void write_patterns(Pattern total_freq_itemsets, std::string out_filename)
 
 int main()
 {
-    fs::path data_dir = fs::current_path() / "test_data";
-    //fs::path data_dir = fs::current_path() / "data";
-    std::cout << data_dir << std::endl;
+    //fs::path data_dir = fs::current_path() / "test_data";
+    fs::path data_dir = fs::current_path() / "data";
     std::fstream datafile;
     std::vector<std::vector<int>> topics[NUM_TOPICS];
     std::unordered_map<int, std::string> vocab_map;
     for (const auto& entry : fs::directory_iterator(data_dir))
     {
-        std::cout << entry.path().string() << std::endl;
-        
         // Read contents of file 
         std::string line;
         std::string filename = entry.path().string();
@@ -388,7 +383,6 @@ int main()
             size_t pos;
             if ((pos = filename.find("-")) != std::string::npos)
             {
-                std::cout << "NUMBER: " << std::stoi(filename.substr(pos+1, 1)) << std::endl;
                 topics[std::stoi(filename.substr(pos+1, 1))] = read_topic(datafile);
                 //for (auto& )
             }
@@ -399,9 +393,7 @@ int main()
     // Iterate over all the topics
     for (unsigned int i = 0; i < NUM_TOPICS; i++)
     {
-        std::map<std::string, int> support_map;
-        get_support(topics[i], support_map, vocab_map);
-
+        std::map<std::string, int> support_map = get_support(topics[i], vocab_map);
         std::vector<std::pair<std::string, int>> vec;
         
         // copy key-value pairs from support map to vector
@@ -425,27 +417,17 @@ int main()
         FPTree fptree;
         for (std::vector<std::string>& trans : freq_trans)
         {
-            fptree.InsertItemset(trans);
+            fptree.InsertItemset(trans, 1);
         }
 
         // Print out the FP-tree
         //fptree.PrintTree();
         
         Pattern total_freq_itemsets = fp_growth(fptree);
-        std::cout << total_freq_itemsets.size() << std::endl;
 
         // Sort the itemsets by support count
         std::sort(total_freq_itemsets.begin(), total_freq_itemsets.end());
-        // for (auto& is: total_freq_itemsets)
-        // {
-        //     std::string item_str = std::to_string(is.support);
-        //     for(auto& item : is.items)
-        //     {
-        //         item_str += " " + item;
-        //     }
-        //     std::cout << item_str << std::endl;
-        // }
-        
         write_patterns(total_freq_itemsets, fs::current_path() / ("output/pattern-" + std::to_string(i) + ".txt"));
     }
+    std::cout << "Patterns saved to " << fs::current_path() / "output" << std::endl;
 }
