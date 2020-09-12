@@ -176,14 +176,14 @@ std::queue<FPNode*> get_leaf_nodes(FPTree& fptree,  std::unordered_set<std::stri
 Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
 {
     // Recursively create patterns
-    std::string prefix;
-    for (const auto& p : cur_prefix) prefix += p + " ";
     
     // The conditional support
     std::unordered_map<std::string, int> cond_sup;
  
     // All the conditional transactions
     std::vector<std::vector<std::string>> cond_trans;
+
+    // The conditional counts for each transaction
     std::vector<int> cond_trans_counts;
 
 
@@ -245,7 +245,6 @@ Pattern create_patterns(FPNode* cur_node, std::vector<std::string> cur_prefix)
         }
     }
     
-
     // The total conditional patterns including this prefix
     Pattern cond_patterns;
     
@@ -384,7 +383,6 @@ int main()
             if ((pos = filename.find("-")) != std::string::npos)
             {
                 topics[std::stoi(filename.substr(pos+1, 1))] = read_topic(datafile);
-                //for (auto& )
             }
         }
         datafile.close();

@@ -3,11 +3,6 @@
 
 #include "fptree.h"
 
-// FPTree::FPTree() 
-// {
-
-// }
-
 void FPTree::InsertItemset(std::vector<std::string>& itemset, int init_count)
 {
     // Need to iterate over tree and incrementing the count until
