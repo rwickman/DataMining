@@ -1,6 +1,6 @@
 # C-1. Frequent Itemset Mining using FP-tree
 ## How to Run
-*NOTE: I have only ran this in a Linux environment (Ubuntu 19.04 to be exact), so keep that in mind.*
+*NOTE: I have only ran this in a Linux environment (Ubuntu 19.04 to be exact) with g++ version 9.2.1 so keep that in mind.*
 
 1. Clone this entire repository.
 2. Run the following command to compile the C++ code:
