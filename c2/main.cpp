@@ -50,8 +50,8 @@ KMeanData read_datafile(std::string& data_filename)
         {
             kmean_data.dims.push_back(Dim(
                 std::numeric_limits<float>::max(),
-                std::numeric_limits<float>::min()),
-                i);
+                std::numeric_limits<float>::min(),
+                i));
         }
 
         // Read all the objects and there attributes
