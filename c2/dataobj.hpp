@@ -30,7 +30,7 @@ struct Dim
   float max_val;
   
   // Should the min be included in the range
-  bool include_min;
+  //bool include_min;
 
   // Should the max be included in the range
   bool include_max;

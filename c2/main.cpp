@@ -5,8 +5,10 @@
 #include <limits>
 
 #include "kmeans.hpp"
+#include "entropy_subspace.hpp"
 
 const unsigned int MAX_KMEANS_ITER = 20;
+const unsigned int DIVIDE_SIZE = 10;
 
 KMeanData read_datafile(std::string& data_filename)
 {
@@ -99,18 +101,23 @@ KMeanData read_datafile(std::string& data_filename)
 
 int main()
 {
-    std::string data_filename =  "data/temp.dat";//"data/A2-small-test.dat";
+    std::string data_filename =  "data/A2-small-test.dat";
+    //std::string data_filename = "data/temp.dat";
     KMeanData kmean_data = read_datafile(data_filename);
     Kmeans k_means(kmean_data.min_k, kmean_data.max_k);
     std::vector<int> dims = {0, 1, 2,3};
     
     
-    std::vector<ClusterResults> results = k_means.cluster(kmean_data.objs, dims, MAX_KMEANS_ITER, 1000);
+    std::vector<ClusterResults> results = k_means.cluster(kmean_data.objs, dims, MAX_KMEANS_ITER, 5);
 
     for (auto& result : results)
     {
         std::cout << "k: " << result.k << " with sse " << result.sse << std::endl;
     }
+
+    EntropySubspace entropy_subspace(DIVIDE_SIZE);
+    entropy_subspace.setup(kmean_data.dims);
+    //entropy_subspace.setup();
     
     //std::ifstream datafile;
     //datafile.open();
