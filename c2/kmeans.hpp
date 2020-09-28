@@ -31,7 +31,7 @@ public:
   void clear();
 
   // calculate the euclidean distance between the center and DataObj 
-  float distance(DataObj& obj);
+  float distance(const DataObj& obj);
 
   // Calculate the sum of squared errors
   float sse();
@@ -49,16 +49,19 @@ class Kmeans
 public:
   Kmeans(int min_k, int max_k);
 
-  // Create a cluster with a random initialized center
-  Cluster create_cluster(std::vector<int>& dims);
-
   // Cluster the DataObjs on the specified dimensions
   std::vector<ClusterResults> cluster(
     std::vector<DataObj>& objs,
     std::vector<int>& dims,
-    int max_kmean_iter);
+    int max_kmean_iter,
+    int num_runs = 5);
+
+
 
 private:
+  // Calculate the average sse of the clustering
+  ClusterResults avg_sse(std::vector<Cluster>& clusters);
+
   int min_k;
   int max_k;
   //std::vector<Cluster> clusters;

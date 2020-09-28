@@ -2,6 +2,7 @@
 #include <ctime>
 #include <cmath>
 #include <limits>
+#include <iostream>
 
 #include "kmeans.hpp"
 
@@ -17,6 +18,12 @@ void Cluster::random_init()
     {
         el = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
     }
+    // std::cout << "Cluster Center: ";
+    // for (int i = 0; i < center.size(); ++i)
+    // {
+    //     std::cout << center[i] << " ";
+    // }
+    // std::cout << std::endl;
 }
 
 void Cluster::update()
@@ -30,14 +37,17 @@ void Cluster::update()
         {
             for (int i = 0; i < dims.size(); i++)
             {
-                sum[i] = obj->attrs[dims[i]];
+                sum[i] += obj->attrs[dims[i]];
             }
         }
         // Take the mean to get center
+        //std::cout << "Cluster Center: ";
         for (int i = 0; i < center.size(); i++)
         {
             center[i] = sum[i] / objs.size();
+            //std::cout << center[i] << " ";
         }
+        //std::cout << std::endl;
     }
 }
 
@@ -51,7 +61,7 @@ void Cluster::clear()
     objs.clear();
 }
 
-float Cluster::distance(DataObj& obj)
+float Cluster::distance(const DataObj& obj)
 {
     // Sum of squared differences
     float ssd = 0.0;
@@ -64,10 +74,18 @@ float Cluster::distance(DataObj& obj)
 
 float Cluster::sse()
 {
-    for (int i = 0; i < dims.size(); ++i)
+    float sse = 0;
+    //std::cout << "CLUSTER SIZE: " << objs.size() << std::endl;
+    for (auto& obj : objs)
     {
-        std::pow(objs[i]->attrs[dims[i]] - center[i], 2);
-    }    
+        for (int i = 0; i < dims.size(); ++i)
+        {
+            sse += std::pow(obj->attrs[dims[i]] - center[i], 2);
+
+        }
+    }
+    //std::cout << "sse: " << sse << std::endl;
+    return sse;
 }
 
 Kmeans::Kmeans(int min_k, int max_k) : min_k(min_k), max_k(max_k)
@@ -78,59 +96,96 @@ Kmeans::Kmeans(int min_k, int max_k) : min_k(min_k), max_k(max_k)
 std::vector<ClusterResults> Kmeans::cluster(
     std::vector<DataObj>& objs,
     std::vector<int>& dims,
-    int max_kmean_iter)
+    int max_kmean_iter,
+    int num_runs)
 {
+    std::vector<ClusterResults> cluster_results;
     for (int k = min_k; k <= max_k; ++k)
     {
-        // Create the initial clusters
-        std::vector<Cluster> clusters;
-        for (int i = 0; i < k; ++i)
+        ClusterResults best_result;
+        // Run K-Means on many varying initializations
+        for (int run = 0; run < num_runs; ++run)
         {
-            Cluster cluster(dims);
-            clusters.push_back(cluster);
-        }
-
-        // Run for max_kmean_iter iterations
-        for (int i = 0; i < max_kmean_iter; ++i)
-        {
-            
-            // Remove DataObjs from all the clusters
-            // This is to prevent duplicates
-            if (i > 0)
+            //std::cout << "USING  " << k << " CLUSTERS" << std::endl;
+            // Create the initial clusters
+            std::vector<Cluster> clusters;
+            for (int i = 0; i < k; ++i)
             {
-                for(auto& cluster : clusters)
-                {
-                    cluster.clear();
-                }
+                Cluster cluster(dims);
+                clusters.push_back(cluster);
             }
-            
-            // Assignment Step (Assign every DataObj to a Cluster)
-            for (auto& obj : objs)
-            {
-                float min_dist = std::numeric_limits<float>::max();
-                float cur_dist;
-                int closest_index;
 
-                // Find which cluster this DataObj is closest to
-                for (int j = 0; j < clusters.size(); ++j)
+            // Run for K-Means for max_kmean_iter iterations
+            for (int i = 0; i < max_kmean_iter; ++i)
+            {
+                
+                // Remove DataObjs from all the clusters
+                // This is to prevent duplicates
+                if (i > 0)
                 {
-                    cur_dist = clusters[j].distance(obj);
-                    if (cur_dist < min_dist)
+                    for(auto& cluster : clusters)
                     {
-                        closest_index = j;
-                        min_dist = cur_dist;
+                        cluster.clear();
                     }
                 }
-                clusters[closest_index].add(&obj);
+
+                // Assignment Step (Assign every DataObj to a Cluster)
+                for (auto& obj : objs)
+                {
+                    float min_dist = std::numeric_limits<float>::max();
+                    float cur_dist;
+                    int closest_index = 0;
+
+                    // Find which cluster this DataObj is closest to
+                    for (int j = 0; j < clusters.size(); ++j)
+                    {
+                        cur_dist = clusters[j].distance(obj);
+                        
+                        if (cur_dist < min_dist)
+                        {
+                            closest_index = j;
+                            min_dist = cur_dist;
+                        }
+                    }
+                    //std::cout << "CLOSEST: " << closest_index << " with dist " << min_dist << std::endl;
+                    clusters[closest_index].add(&obj);
+                }
+
+                // Update Step (Update cluster centers)
+                for (auto& cluster : clusters)
+                {
+                    cluster.update();
+                }
             }
 
-            // Update Step (Update cluster centers)
-            for (auto& cluster : clusters)
+            // Calculate the clustering results
+            ClusterResults cur_result = avg_sse(clusters);
+            //std::cout << "cur_result.sse: " << cur_result.sse << std::endl;
+            if (run == 0)
             {
-                cluster.update();
+                best_result = cur_result;
+            }
+            else if (best_result.sse > cur_result.sse)
+            {
+                best_result = cur_result;
             }
         }
+        cluster_results.push_back(best_result);
     }
+    return cluster_results;
+}
 
-
+ClusterResults Kmeans::avg_sse(std::vector<Cluster>& clusters)
+{
+    float total_sse = 0;
+    for (auto& cluster: clusters)
+    {
+        total_sse += cluster.sse();
+    }
+    
+    // Create the cluster results
+    ClusterResults results;
+    results.sse = total_sse / clusters.size();
+    results.k = clusters.size();
+    return results;
 }

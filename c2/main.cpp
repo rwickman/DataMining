@@ -2,10 +2,11 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <limits>
 
 #include "kmeans.hpp"
 
-const int KMEANS_ITERATIONS = 20;
+const unsigned int MAX_KMEANS_ITER = 20;
 
 KMeanData read_datafile(std::string& data_filename)
 {
@@ -44,6 +45,15 @@ KMeanData read_datafile(std::string& data_filename)
         // Get the last number
         kmean_data.max_k = std::stoi(line.substr(last_pos));
         
+        // Add Dim objects
+        for (int i = 0; i < num_attrs; i++)
+        {
+            kmean_data.dims.push_back(Dim(
+                std::numeric_limits<float>::max(),
+                std::numeric_limits<float>::min()),
+                i);
+        }
+
         // Read all the objects and there attributes
         for (int i = 0; i < num_objs; ++i)
         {
@@ -54,23 +64,34 @@ KMeanData read_datafile(std::string& data_filename)
             getline(datafile, line);
             DataObj obj;
             obj.id = i;
+            float dim_val;
             for (int j = 0; j < num_attrs; j++)
             {   
+                float dim_val;
                 if (j == num_attrs - 1)
                 {
-                    obj.attrs.push_back(std::stof(line.substr(last_pos)));
-                    std::cout << obj.attrs[obj.attrs.size() - 1];
+                    dim_val = std::stof(line.substr(last_pos));
+                    
                 }
                 else
                 {
                     delim_pos = line.find(" ", last_pos);
-                    obj.attrs.push_back(std::stof(line.substr(last_pos, delim_pos - last_pos)));
-                    std::cout << obj.attrs[obj.attrs.size() - 1] << " ";
+                    dim_val = std::stof(line.substr(last_pos, delim_pos - last_pos));
                     last_pos = delim_pos + 1;    
+                }
+                obj.attrs.push_back(dim_val);
+    
+                // Update value range for dimensions
+                if (kmean_data.dims[j].max_val < dim_val)
+                {
+                    kmean_data.dims[j].max_val = dim_val;
+                }
+                if (kmean_data.dims[j].min_val > dim_val)
+                {
+                    kmean_data.dims[j].min_val = dim_val;
                 }
             }
             kmean_data.objs.push_back(obj);
-            std::cout << "\n";
         }
     }
     return kmean_data;
@@ -78,9 +99,18 @@ KMeanData read_datafile(std::string& data_filename)
 
 int main()
 {
-    std::string data_filename =  "data/A2-small-test.dat";
+    std::string data_filename =  "data/temp.dat";//"data/A2-small-test.dat";
     KMeanData kmean_data = read_datafile(data_filename);
     Kmeans k_means(kmean_data.min_k, kmean_data.max_k);
+    std::vector<int> dims = {0, 1, 2,3};
+    
+    
+    std::vector<ClusterResults> results = k_means.cluster(kmean_data.objs, dims, MAX_KMEANS_ITER, 1000);
+
+    for (auto& result : results)
+    {
+        std::cout << "k: " << result.k << " with sse " << result.sse << std::endl;
+    }
     
     //std::ifstream datafile;
     //datafile.open();
