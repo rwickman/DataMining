@@ -185,7 +185,7 @@ ClusterResults Kmeans::avg_sse(std::vector<Cluster>& clusters)
     
     // Create the cluster results
     ClusterResults results;
-    results.sse = total_sse / clusters.size();
+    results.sse = total_sse; /// clusters.size();
     results.k = clusters.size();
     return results;
 }

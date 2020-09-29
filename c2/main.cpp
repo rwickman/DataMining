@@ -9,6 +9,11 @@
 
 const unsigned int MAX_KMEANS_ITER = 20;
 const unsigned int DIVIDE_SIZE = 10;
+const unsigned int MAX_NUM_SUBSPACES = 3;
+const unsigned int NUM_KMEAN_REPEAT = 30;
+// This could be set to 0.2 as in slides, but could risk removing all
+// possible subspaces
+const unsigned int ENTROPY_THRESHOLD = 1.0; 
 
 KMeanData read_datafile(std::string& data_filename)
 {
@@ -105,18 +110,44 @@ int main()
     //std::string data_filename = "data/temp.dat";
     KMeanData kmean_data = read_datafile(data_filename);
     Kmeans k_means(kmean_data.min_k, kmean_data.max_k);
-    std::vector<int> dims = {0, 1, 2,3};
-    
-    
-    std::vector<ClusterResults> results = k_means.cluster(kmean_data.objs, dims, MAX_KMEANS_ITER, 5);
-
-    for (auto& result : results)
-    {
-        std::cout << "k: " << result.k << " with sse " << result.sse << std::endl;
-    }
 
     EntropySubspace entropy_subspace(DIVIDE_SIZE);
     entropy_subspace.setup(kmean_data.dims);
+    
+    std::vector<int> dims_vec;
+    if (kmean_data.dims.size() > MAX_NUM_SUBSPACES)
+    {
+        auto best_subspace = entropy_subspace.find_best_subspaces(
+            kmean_data.objs,
+            MAX_NUM_SUBSPACES,
+            ENTROPY_THRESHOLD);
+        for (auto& el : best_subspace)
+        {
+            std::cout << el << " ";
+        }
+        std::cout << std::endl;
+        std::copy(best_subspace.begin(), best_subspace.end(), std::back_inserter(dims_vec));
+    }
+    else
+    {
+        for(int i = 0; i < kmean_data.dims.size(); ++i)
+        {
+            dims_vec.push_back(i);
+        }
+    }
+    
+    
+    std::vector<ClusterResults> results = k_means.cluster(
+        kmean_data.objs,
+        dims_vec,
+        MAX_KMEANS_ITER,
+        NUM_KMEAN_REPEAT);
+
+    for (auto& result : results)
+    {
+        //std::cout << "k: " << result.k << " with sse " << result.sse << std::endl;
+        std::cout << result.k << " " << result.sse << std::endl;
+    }
     //entropy_subspace.setup();
     
     //std::ifstream datafile;

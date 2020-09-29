@@ -1,4 +1,6 @@
 #include <iostream>
+#include <cmath>
+#include <stdexcept>
 
 #include "entropy_subspace.hpp"
 
@@ -39,9 +41,9 @@ void indices_comb(std::vector<std::unordered_set<int>>& nums, std::vector<int> c
 
 Cell::Cell(std::vector<Dim> cell_dims) : cell_dims(cell_dims) {}
 
-bool Cell::in_range(DataObj& obj, std::vector<int> cur_dims)
+bool Cell::in_range(DataObj& obj, std::unordered_set<int> cur_dims)
 {
-    for (int& dim : cur_dims)
+    for (const int& dim : cur_dims)
     {
         // Check if this object should be in this cell
         if (obj.attrs[dim] < cell_dims[dim].min_val || 
@@ -51,12 +53,30 @@ bool Cell::in_range(DataObj& obj, std::vector<int> cur_dims)
             return false;
         }
     }
+
+    std::string cell_mins = "";
+    std::string cell_maxs = "";
+    std::string obj_attrs = "";
+    for (const int& dim : cur_dims)
+    {
+        cell_mins += " " + std::to_string(cell_dims[dim].min_val);
+        cell_maxs += " " + std::to_string(cell_dims[dim].max_val);
+        obj_attrs += " " + std::to_string(obj.attrs[dim]); 
+    }
+    // std::cout << "CELL MINS " << cell_mins << std::endl;
+    // std::cout << "CELL MAXS " << cell_maxs << std::endl;
+    // std::cout << "OBJ ATTRIBUTES " << obj_attrs << std::endl; 
     return true;
 }
 
 void Cell::add(DataObj* obj)
 {
     objs.push_back(obj);
+}
+
+size_t Cell::size()
+{
+    return objs.size();
 }
 
 void Cell::clear()
@@ -68,47 +88,97 @@ EntropySubspace::EntropySubspace(int divide_size) : divide_size(divide_size) {}
 
 void EntropySubspace::setup(std::vector<Dim>& dims)
 {
-    std::cout << "Setting Up Subspace Cells" << std::endl;
+    //std::cout << "Setting Up Subspace Cells" << std::endl;
     //Create Cells
     //Divide the dimension into equal ranges
     num_dims = dims.size();
-    std::cout << "num_dims " << num_dims << std::endl;
+    //std::cout << "num_dims " << num_dims << std::endl;
     std::vector<std::vector<Dim>> divided_dims = divide_dims(dims);
-    std::cout << "divided_dims size " << divided_dims.size() << " divided_dims[0].size() " << divided_dims[0].size() << std::endl; 
+    //std::cout << "divided_dims size " << divided_dims.size() << " divided_dims[0].size() " << divided_dims[0].size() << std::endl; 
     
     // Cells wil be created from every permutation of divided_dims
     cells = create_cells(divided_dims);
-    std::cout << "cells.size()" << cells.size() << std::endl;
-    std::cout << "Done Setting Up Subspace Cells" << std::endl;
+    //std::cout << "cells.size()" << cells.size() << std::endl;
+    //std::cout << "Done Setting Up Subspace Cells" << std::endl;
 }
 
-std::vector<int> EntropySubspace::find_best_subspaces(std::vector<DataObj>& objs, int num_subspaces)
+std::unordered_set<int>
+EntropySubspace::find_best_subspaces(
+    std::vector<DataObj>& objs,
+    int num_subspaces,
+    float entropy_threshold)
 {
     if (cells.size() == 0)
     {
-        throw "Must call EntropySubspace::setup before finding best subspace!";
+        throw std::runtime_error("Must call EntropySubspace::setup before finding best subspace!");
     }
 
-    // Use Aprori approach to find best subspaces
-    std::vector<int> best_subspaces;
-
+    // Use Aprori to find best subspaces
     std::vector<std::unordered_set<int>> old_dim_sets;
+    std::vector<float> entropy_scores;
     for(int i = 0; i < num_subspaces; ++i)
     {
+        //std::cout << "SUBSPACE " << i << std::endl;
         // 1. Join (Create DimSets)
         std::vector<std::unordered_set<int>> dim_sets;
         indices_comb(dim_sets, {}, 0, i+1, num_dims);
+        for (auto dim_set : dim_sets)
+        {
+            for (auto el : dim_set)
+            {
+                std::cout << el << " ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "dim_sets.size() " << dim_sets.size() << " dim_sets[0].size() " << dim_sets[0].size() << std::endl;
+        //std::cout << "COMB" << std::endl;
 
         // 2. Prune
         if (i > 0)
         {
+            //std::cout << "PRUNE" << std::endl;
             // Check if every subset of dim_set is in old_dim_sets
             dim_sets = prune(dim_sets, old_dim_sets);
+            //std::cout << "PRUNE DONE" << std::endl;
         }
 
-        // 3. 
+        // 3. Counting
+        //std::cout << "COUNTING" << std::endl;
+        auto dim_entropy_pair = counting(objs, dim_sets, entropy_threshold);
+        //std::cout << "COUNTING DONE" << std::endl;
+        old_dim_sets = dim_entropy_pair.first;
+        entropy_scores = dim_entropy_pair.second;
+        
+        for (auto score : entropy_scores)
+        {
+            std::cout << score << " ";
+        }
+        std::cout << std::endl;
+    
     }
-    return best_subspaces;
+    std::unordered_set<int> best_subspace;
+    float best_entropy_score;
+    if (old_dim_sets.size() > 0)
+    {
+        best_subspace = old_dim_sets[0];
+        best_entropy_score = entropy_scores[0];
+        for (int i = 1; i < old_dim_sets.size(); ++i)
+        {
+            //std::cout << entropy_scores[i] << std::endl;
+            if (entropy_scores[i] < best_entropy_score)
+            {
+                best_entropy_score = entropy_scores[i];
+                best_subspace = old_dim_sets[i]; 
+            }
+        }
+    }
+    else
+    {
+        throw std::runtime_error("Did not find any best subspaces!");
+    }
+    std::cout << "BEST ENTROPY: " << best_entropy_score << std::endl;
+
+    return best_subspace;
 }
 
 
@@ -149,7 +219,7 @@ std::vector<Cell> EntropySubspace::create_cells(std::vector<std::vector<Dim>>& d
     indices_perm(perms, {}, divide_size, divided_dims.size());
     std::vector<Cell> cells;
 
-    std::cout << "perm.size() " << perms.size() << "perm[0].size() " << perms[0].size() << std::endl;
+    //std::cout << "perm.size() " << perms.size() << "perm[0].size() " << perms[0].size() << std::endl;
     // Create the cells
     for(auto& perm : perms)
     {
@@ -166,24 +236,26 @@ std::vector<Cell> EntropySubspace::create_cells(std::vector<std::vector<Dim>>& d
 
 void EntropySubspace::assign_objs(
     std::vector<DataObj>& objs,
-    std::vector<Cell> cells,
-    std::vector<int> cur_dims)
+    std::unordered_set<int> cur_dims)
 {
     int count = 0;
     for (auto& obj : objs)
     {
+        int i = 0;
         for (auto& cell : cells)
         {
             if(cell.in_range(obj, cur_dims))
             {
+                //std::cout << "IN CELL " << i << std::endl;
                 // TODO: VERIFY ALL THE DOs ARE ADDED
                 cell.add(&obj);
                 count += 1;
                 break;
             }
+            ++i;
         }
     }
-    std::cout << "COUNT " << count << " NUM OBJS " << objs.size() << std::endl; 
+    //std::cout << "COUNT " << count << " NUM OBJS " << objs.size() << std::endl; 
 }
 
 std::vector<std::unordered_set<int>> 
@@ -222,4 +294,69 @@ EntropySubspace::prune(
         }
     }
     return pruned_dim_sets;
+}
+
+std::pair<std::vector<std::unordered_set<int>>, std::vector<float>>
+EntropySubspace::counting(
+    std::vector<DataObj>& objs,
+    std::vector<std::unordered_set<int>>& dim_sets,
+    float entropy_threshold)
+{
+    //assign_objs(objs, dim_sets);
+    std::vector<std::unordered_set<int>> updated_dim_sets;
+    std::vector<float> entropy_scores;
+    for (auto& dim_set : dim_sets)
+    {
+        // Assign every DataObj to a cell
+        assign_objs(objs, dim_set);
+
+        // Calculate total entropy
+        float total_entropy = calc_total_entropy(objs.size());
+        
+        // See if it has a minimal entropy
+        if (total_entropy <= entropy_threshold)
+        {
+            updated_dim_sets.push_back(dim_set);
+            entropy_scores.push_back(total_entropy);
+        }
+        reset();
+    }
+    return {updated_dim_sets, entropy_scores};
+}
+
+float EntropySubspace::calc_total_entropy(int num_objs)
+{
+    float total_entropy = 0;
+    //std::cout << "ITERATING OVER CELLS" << std::endl;
+    for (auto& cell : cells)
+    {
+        // Calculate cell density
+        float cell_density = static_cast<float>(cell.size()) / static_cast<float>(num_objs);
+        if (cell.size() > 0)
+        {
+            //std::cout << "CELL DENSITY " << cell_density << " size: " << cell.size() << " NUM OBJ " << num_objs<< std::endl;
+        }
+        
+        if (cell_density > 0)
+        {
+            //std::cout << "CUR ENTROPY " << cell_density * std::log2(cell_density) << std::endl;
+            total_entropy += cell_density * std::log2(cell_density);
+        }
+        
+    }
+    //std::cout << "TOTAL ENTROPY " << -total_entropy << std::endl;
+    return -total_entropy;
+}
+
+void EntropySubspace::reset()
+{
+    //std::cout << "Clearing Cells" << std::endl;
+    for (auto& cell : cells)
+    {
+        cell.clear();
+        if (cell.size() > 0)
+        {
+            throw std::runtime_error("STILL ELEMENTS LEFT IN CELL");
+        }
+    }
 }
