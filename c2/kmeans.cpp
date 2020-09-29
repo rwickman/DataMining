@@ -106,7 +106,6 @@ std::vector<ClusterResults> Kmeans::cluster(
         // Run K-Means on many varying initializations
         for (int run = 0; run < num_runs; ++run)
         {
-            //std::cout << "USING  " << k << " CLUSTERS" << std::endl;
             // Create the initial clusters
             std::vector<Cluster> clusters;
             for (int i = 0; i < k; ++i)
@@ -160,7 +159,6 @@ std::vector<ClusterResults> Kmeans::cluster(
 
             // Calculate the clustering results
             ClusterResults cur_result = avg_sse(clusters);
-            //std::cout << "cur_result.sse: " << cur_result.sse << std::endl;
             if (run == 0)
             {
                 best_result = cur_result;

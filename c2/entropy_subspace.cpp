@@ -137,7 +137,7 @@ EntropySubspace::find_best_subspaces(
     {
         throw std::runtime_error("Did not find any best subspaces!");
     }
-    std::cout << "BEST ENTROPY: " << best_entropy_score << std::endl;
+    //std::cout << "BEST ENTROPY: " << best_entropy_score << std::endl;
 
     return best_subspace;
 }
@@ -206,7 +206,6 @@ void EntropySubspace::assign_objs(
         {
             if(cell.in_range(obj, cur_dims))
             {
-                // TODO: VERIFY ALL THE DOs ARE ADDED
                 cell.add(&obj);
                 count += 1;
                 break;
