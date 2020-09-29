@@ -104,9 +104,26 @@ KMeanData read_datafile(std::string& data_filename)
     return kmean_data;
 }
 
+void write_results(std::vector<ClusterResults> results, std::string output_filename)
+{
+    std::ofstream result_file;
+    result_file.open(output_filename);
+    if (result_file.is_open())
+    {
+        for(const auto& result : results)
+        {
+            result_file << result.k << " " << result.sse << "\n";
+        }
+        
+    }
+    result_file.close();
+}
+
 int main()
 {
     std::string data_filename =  "data/A2-small-test.dat";
+    std::string output_filename = "test.res";
+    
     //std::string data_filename = "data/temp.dat";
     KMeanData kmean_data = read_datafile(data_filename);
     Kmeans k_means(kmean_data.min_k, kmean_data.max_k);
@@ -121,11 +138,11 @@ int main()
             kmean_data.objs,
             MAX_NUM_SUBSPACES,
             ENTROPY_THRESHOLD);
-        for (auto& el : best_subspace)
-        {
-            std::cout << el << " ";
-        }
-        std::cout << std::endl;
+        // for (auto& el : best_subspace)
+        // {
+        //     std::cout << el << " ";
+        // }
+        // std::cout << std::endl;
         std::copy(best_subspace.begin(), best_subspace.end(), std::back_inserter(dims_vec));
     }
     else
@@ -148,20 +165,6 @@ int main()
         //std::cout << "k: " << result.k << " with sse " << result.sse << std::endl;
         std::cout << result.k << " " << result.sse << std::endl;
     }
-    //entropy_subspace.setup();
-    
-    //std::ifstream datafile;
-    //datafile.open();
-    // if (datafile.is_open())
-    // {
-    //     std::string line;
-    //     while(std::getline(datafile, line))
-    //     {
-    //         std::cout << line << std::endl;
-    //     }
-    // }
-    
-    
-    //std::cout << "Hello World!" << std::endl;
-    //std::ifstream  
+    // Write out the results
+    write_results(results, output_filename);
 }
