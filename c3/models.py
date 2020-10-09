@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
+import numpy as np
+
 class BinaryNetwork(nn.Module):
     def __init__(self, input_size, H):
         """Create the one layer neural network used for binary classification.
@@ -28,6 +30,13 @@ def train_bi(bi_data_dic):
     ### plot results
     ### Use max and output test score
     pass
+    
+
+    
+    
+
+
+
 
 
 

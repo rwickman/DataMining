@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from trainer import TrainerBN
 
 def load_bi_data():
     data_dir = "datasets/bi-class"
@@ -12,4 +13,6 @@ def load_bi_data():
     return bi_data_dict
 
 bi_data_dict = load_bi_data()
-print(bi_data_dict["iris"])
+
+trainer_bn = TrainerBN(bi_data_dict["iris"])
+trainer_bn.k_fold_cv(5)
