@@ -14,5 +14,5 @@ def load_bi_data():
 
 bi_data_dict = load_bi_data()
 
-trainer_bn = TrainerBN(bi_data_dict["iris"])
-trainer_bn.k_fold_cv(5)
+trainer_bn = TrainerBN(bi_data_dict["iris"], patience=15)
+trainer_bn.k_fold_cv(5, 1)
