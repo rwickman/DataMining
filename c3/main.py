@@ -97,7 +97,7 @@ def run_bn():
     bi_data_dict = load_bi_data()
     for name, dataset in bi_data_dict.items():
         scale_dataset(dataset)
-        trainer_bn = TrainerBN(dataset, H_list, patience=35, epochs=50)
+        trainer_bn = TrainerBN(dataset, H_list, patience=35, epochs=1)
         val_losses_dict[name] = trainer_bn.k_fold_cv(5, 2)
 
         # Get the best H value and train the network on it
@@ -122,8 +122,8 @@ def run_mn():
     
 
 def main():
-    #run_bn()
-    run_mn()
+    run_bn()
+    #run_mn()
 
 
 
