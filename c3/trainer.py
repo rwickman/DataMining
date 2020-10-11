@@ -5,6 +5,29 @@ import torch.optim as optim
 import numpy as np
 from sklearn.model_selection import KFold
 from models import BinaryNetwork, MultiNetwork
+from dataclasses import dataclass
+
+@dataclass
+class BNResults:
+    train_loss: float
+    val_loss: float
+    test_loss: float
+    train_accuracy: float
+    val_accuracy: float
+    test_accuracy: float
+    best_H: int
+
+@dataclass
+class MultiResults:
+    train_loss: float
+    val_loss: float
+    test_loss: float
+    train_accuracy: float
+    val_accuracy: float
+    test_accuracy: float
+    best_L1: int
+    best_L2: int
+    
 
 
 class Trainer:
@@ -14,7 +37,7 @@ class Trainer:
                 lr=1e-2,
                 batch_size=16,
                 early_stopping=True,
-                patience=10,
+                patience=5,
                 decay_rate=0.99,
                 num_rand_init=1):
         self._loss_fn = loss_fn
@@ -27,13 +50,26 @@ class Trainer:
         self._num_rand_init = num_rand_init
         
 
-    def _train(self, model, optimizer, lr_scheduler, train_X, train_Y, val_X, val_Y):
+    def _train(self,
+                model,
+                optimizer,
+                lr_scheduler,
+                train_X,
+                train_Y,
+                val_X,
+                val_Y,
+                should_convert=False):
 
         # Train over all the epochs
         if self._early_stopping:
             min_val_loss = None
             steps_past_min = 0
-        print(self._epochs)
+        
+        val_Y_tensor = torch.from_numpy(val_Y)
+        if should_convert:
+            val_Y_tensor = val_Y_tensor.float() 
+
+        
         for e_i in range(self._epochs):
             if e_i % 5 == 0:
                 print("Training on epoch ", e_i)
@@ -43,11 +79,17 @@ class Trainer:
                 list(zip(train_X, train_Y)),
                 batch_size = self._batch_size)
             for train_batch in trainloader:
+                optimizer.zero_grad()
                 train_batch_X, train_batch_Y = train_batch
                 # Predict on batch
                 outputs = model(train_batch_X.float())
+
                 # Compute loss on batch
-                batch_loss = self._loss_fn(outputs, train_batch_Y.float())
+                if should_convert:
+                    train_batch_Y = train_batch_Y.float()
+                
+                #if isinstance(outputs, torch.LongTensor))
+                batch_loss = self._loss_fn(outputs, train_batch_Y)
                 total_batch_loss += batch_loss.item()
                 
                 # Compute gradient
@@ -58,25 +100,21 @@ class Trainer:
                 # Test on validation set
                 outputs = model(torch.from_numpy(val_X).float())
                 # Compute loss on batch
-                val_batch_loss = self._loss_fn(outputs, torch.from_numpy(val_Y).float()).item()
-                optimizer.zero_grad()
+                        
+            val_batch_loss = self._loss_fn(outputs, val_Y_tensor).item()
+            if self._early_stopping:
+                if min_val_loss == None or min_val_loss >= val_batch_loss:
+                    min_val_loss = val_batch_loss
+                    steps_past_min = 0
+                else:
+                    steps_past_min += 1
                 
-                #print("lr_scheduler.get_lr(): ", lr_scheduler.get_lr())
-                if self._early_stopping:
-                    if min_val_loss == None or min_val_loss >= val_batch_loss:
-                        min_val_loss = val_batch_loss
-                        steps_past_min = 0
-                    else:
-                        steps_past_min += 1
-                    
-                    if steps_past_min >= self._patience:
-                        print("EARLY STOPPING ON EPOCH ", e_i)
-                        return
+                if steps_past_min >= self._patience:
+                    print("EARLY STOPPING ON EPOCH ", e_i)
+                    return
 
             lr_scheduler.step()
-
-
-            print("Batch Loss: ", total_batch_loss)
+            #print("Batch Loss: ", total_batch_loss)
 
 
 
@@ -88,7 +126,7 @@ class TrainerBN(Trainer):
                 lr=1e-2,
                 batch_size=16,
                 early_stopping=True,
-                patience=10,
+                patience=5,
                 decay_rate=0.99,
                 num_rand_init=1):
         """Create TrainerBN to train and perform hyperparameter tuning.
@@ -151,7 +189,8 @@ class TrainerBN(Trainer):
                         self._train_X[train_idx],
                         self._train_Y[train_idx],
                         self._train_X[test_idx],
-                        self._train_Y[test_idx])
+                        self._train_Y[test_idx],
+                        True)
                     # Compute fold loss
                     outputs = bi_net(torch.from_numpy(self._train_X[test_idx]).float())
                     fold_loss = self._loss_fn(outputs, torch.from_numpy(self._train_Y[test_idx]).float()).item()
@@ -169,7 +208,7 @@ class TrainerBN(Trainer):
         #print(avg_val_losses)
         return avg_val_losses
 
-    def get_trained_BN(self, H, val_percent=0.1):
+    def get_trained_BN(self, H, val_percent=0.2):
         """Get a trained neural network.
 
         Args:
@@ -197,7 +236,8 @@ class TrainerBN(Trainer):
             self._train_X[train_idxs],
             self._train_Y[train_idxs],
             self._train_X[val_idxs],
-            self._train_Y[val_idxs])
+            self._train_Y[val_idxs],
+            True)
         # Get all the different losses
         # Get the final training loss
         outputs = bi_net(torch.from_numpy(self._train_X[train_idxs]).float())
@@ -210,15 +250,36 @@ class TrainerBN(Trainer):
         # Get the test loss
         outputs = bi_net(torch.from_numpy(self._test_X).float())
         test_loss = self._loss_fn(outputs, torch.from_numpy(self._test_Y).float()).item()
-        
         losses = {
             "train" : train_loss,
             "validation" : val_loss,
             "test" : test_loss
         }
+
+        train_acc = self._compute_accuracy(bi_net, self._train_X[train_idxs], np.squeeze(self._train_Y[train_idxs]))
+        val_acc  = self._compute_accuracy(bi_net, self._train_X[val_idxs], np.squeeze(self._train_Y[val_idxs]))
+        test_acc = self._compute_accuracy(bi_net, self._test_X, np.squeeze(self._test_Y))
         
+        results = BNResults(
+            train_loss,
+            val_loss,
+            test_loss,
+            train_acc,
+            val_acc,
+            test_acc,
+            H)
+
         print("Test BCE Loss: ", test_loss)
-        return bi_net, losses
+        return bi_net, losses, results
+
+    def _compute_accuracy(self, net, X, Y, decision_threshold=0.5):
+        outputs = net(torch.from_numpy(X).float()).detach()
+        outputs[outputs >= decision_threshold] = 1
+        outputs = np.squeeze(outputs.numpy()).astype(int)
+        acc = (outputs == Y).sum() / len(Y)
+        return acc
+
+
 
 
 class TrainerMulti(Trainer):
@@ -230,7 +291,7 @@ class TrainerMulti(Trainer):
                 lr=1e-2,
                 batch_size=16,
                 early_stopping=True,
-                patience=10,
+                patience=5,
                 decay_rate=0.99,
                 num_rand_init=1):
         super().__init__(nn.CrossEntropyLoss(),
@@ -244,11 +305,9 @@ class TrainerMulti(Trainer):
         self._image_data = image_data
         self._L1_list = L1_list
         self._L2_list = L2_list
-        self._batch_size = batch_size
-        self._epochs = epochs
+        print(self._patience)
 
-        self._loss_fn = nn.CrossEntropyLoss()
-    
+
     def cross_validation(self, num_init=1, val_percent=0.2):
         """Perform cross-validation to hyperparamater tune L1 and L2.
         """
@@ -257,14 +316,65 @@ class TrainerMulti(Trainer):
         # Split the data into training and validation
         train_X, train_Y, val_X, val_Y = self._train_val_split()
 
+        overall_min_val_loss = None
+        best_params = None
+        best_net = None
+
+        # For every combination of L1 and L2 values it will give the validation loss
+        param_val_dict = {}
+
         for L1 in self._L1_list:
             for L2 in self._L2_list:
                 best_val_loss = None
                 for _ in range(num_init):
+                    # Build the model
                     multi_net = MultiNetwork(train_X.shape[1], L1, L2)
-                    pass
+                    optimizer = optim.Adam(multi_net.parameters(), lr=self._lr)
+                    # The LR Decay Scheduler
+                    lr_scheduler = optim.lr_scheduler.ExponentialLR(
+                        optimizer=optimizer,
+                        gamma=self._decay_rate)
+                    self._train(
+                        multi_net,
+                        optimizer,
+                        lr_scheduler,
+                        train_X,
+                        train_Y,
+                        val_X,
+                        val_Y
+                    )
+                    outputs = multi_net(torch.from_numpy(val_X).float())
+                    val_loss = self._loss_fn(outputs, torch.from_numpy(val_Y)).item()
+                    print("Val Loss: ", val_loss)
+                    param_val_dict[(L1, L2)] = val_loss
+                    if best_val_loss is None or val_loss < best_val_loss:
+                        best_val_loss = val_loss
+                        if overall_min_val_loss is None or best_val_loss < overall_min_val_loss:
+                            overall_min_val_loss = best_val_loss
+                            best_net = multi_net
+                            best_params = (L1, L2)
+                
+                val_losses.append(best_val_loss)
 
-
+        # Compute losses for best network
+        outputs = best_net(torch.from_numpy(train_X).float())
+        train_loss = self._loss_fn(outputs, torch.from_numpy(train_Y)).item()
+        outputs = best_net(torch.from_numpy(self._image_data.test_X).float())
+        test_loss = self._loss_fn(outputs, torch.from_numpy(self._image_data.test_Y[0])).item()
+        
+        train_acc = self._compute_accuracy(best_net, train_X, train_Y)
+        val_acc = self._compute_accuracy(best_net, val_X, val_Y)
+        test_acc = self._compute_accuracy(best_net, self._image_data.test_X, self._image_data.test_Y[0])
+        results = MultiResults(train_loss,
+                                overall_min_val_loss, 
+                                test_loss,
+                                train_acc,
+                                val_acc,
+                                test_acc,
+                                best_params[0],
+                                best_params[1])
+        
+        return param_val_dict, results
 
 
     def _train_val_split(self, val_percent=0.2):
@@ -278,5 +388,9 @@ class TrainerMulti(Trainer):
             self._image_data.train_Y[0, train_idxs], \
             self._image_data.train_X[val_idxs], \
             self._image_data.train_Y[0, val_idxs]
-
-        
+    
+    def _compute_accuracy(self, net, X, Y):
+        outputs = net(torch.from_numpy(X).float()).detach()
+        class_preds = np.argmax(outputs.numpy(), axis=-1)
+        acc = (class_preds == Y).sum() / len(Y)
+        return acc

@@ -25,12 +25,12 @@ class MultiNetwork(nn.Module):
     def __init__(self, input_size, L1, L2):
         super().__init__()
         self.hidden_1 = nn.Linear(input_size, L1)
-        self.hidden_1 = nn.Linear(L1, L2)
+        self.hidden_2 = nn.Linear(L1, L2)
         self.out = nn.Linear(L2, 10)
     
     def forward(self, x):
         x = F.relu(self.hidden_1(x))
         x = F.relu(self.hidden_2(x))
-        x = self.self.out(x)
+        x = self.out(x)
         return x
 

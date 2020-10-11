@@ -43,12 +43,15 @@ def load_multi_data():
 
     return image_data
 
-
-
 def scale_dataset(dataset):
-    scaler = StandardScaler().fit(dataset["train_X"])
-    dataset["train_X"] = scaler.transform(dataset["train_X"])
-    dataset["test_X"] = scaler.transform(dataset["test_X"])
+    if isinstance(dataset, ImageData):
+        scaler = StandardScaler().fit(dataset.train_X)
+        dataset.train_X = scaler.transform(dataset.train_X)
+        dataset.test_X = scaler.transform(dataset.test_X)
+    else:
+        scaler = StandardScaler().fit(dataset["train_X"])
+        dataset["train_X"] = scaler.transform(dataset["train_X"])
+        dataset["test_X"] = scaler.transform(dataset["test_X"])
 
 def plot_H_loss(val_losses_dict, H_list):
     fig, axs = plt.subplots(math.ceil(len(val_losses_dict)/2), 2)
@@ -86,6 +89,20 @@ def plot_best_losses(best_net_losses_dict):
         fig.delaxes(axs[math.ceil(len(best_net_losses_dict)/2)-1][1])
     plt.show()
 
+def plot_L1_L2_loss(param_val_dict):
+    fig, axs = plt.subplots(1)
+    axs.set_title("CE Validation Loss vs (L1,L2)")
+    axs.set_xlabel("(L1,L2)")
+    axs.set_ylabel("CE Validation Loss")
+    axs.grid(True)
+    param_tuples = []
+    losses = []
+    for k,v in param_val_dict.items():
+        param_tuples.append(str(k))
+        losses.append(v)
+    axs.plot(param_tuples, losses)
+    plt.show()
+
 
 def run_bn():
     # Perform hyperparameter tuning on number for the
@@ -93,37 +110,43 @@ def run_bn():
     H_list = np.arange(1,11)
     val_losses_dict = {}
     best_net_losses_dict = {}
-    best_H_list = []
+    best_results = {}
     bi_data_dict = load_bi_data()
     for name, dataset in bi_data_dict.items():
         scale_dataset(dataset)
-        trainer_bn = TrainerBN(dataset, H_list, patience=35, epochs=1)
-        val_losses_dict[name] = trainer_bn.k_fold_cv(5, 2)
+        trainer_bn = TrainerBN(dataset, H_list, batch_size=16, patience=10, epochs=100)
+        val_losses_dict[name] = trainer_bn.k_fold_cv(5, 3)
 
         # Get the best H value and train the network on it
         best_H = H_list[np.argmin(val_losses_dict[name])]
         print("BEST H: ", best_H)
-        bi_net, losses = trainer_bn.get_trained_BN(best_H)
+        bi_net, losses, results = trainer_bn.get_trained_BN(best_H)
         best_net_losses_dict[name] = losses
-        best_H_list.append((name, best_H))
-    
-    # TODO: Compute the accuracy as well
-    print("Final Losses: ", best_net_losses_dict)
-    print("Best Hs: ", best_H_list)
+        best_results[name] = results
+
     plot_best_losses(best_net_losses_dict)
     plot_H_loss(val_losses_dict, H_list)
+    return best_results
 
 def run_mn():
     image_data = load_multi_data()
+    scale_dataset(image_data)
     L1_list = [50, 75, 100]
     L2_list = [10, 15, 20]
-    trainer = TrainerMulti(image_data, L1_list, L2_list)
-    trainer.cross_validation()
-    
+    trainer = TrainerMulti(image_data, L1_list, L2_list, batch_size=256, patience=10, epochs=100)
+    param_val_dict, results = trainer.cross_validation(num_init=3)
+    #print(results)
+    #print("MIN VALIDATION LOSS: ", min_val_loss, " BEST PARAMETERS: ", best_params)
+    plot_L1_L2_loss(param_val_dict)
+    return results
+
 
 def main():
-    run_bn()
-    #run_mn()
+    bn_best_results = run_bn()    
+    mn_results = run_mn()
+    print("\nBinary Classification Results: ", bn_best_results)
+    print("\nMulti-class Classification Results: ", mn_results)
+    
 
 
 
