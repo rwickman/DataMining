@@ -21,23 +21,16 @@ class BinaryNetwork(nn.Module):
         x = self.out(x)
         return x
 
-
-def train_bi(bi_data_dic):
-    # Perform train for each dataset in bi_data_dic
-    ## Iterate over all possible H values
-    ### Run k-fold cross-validation and average the total binary-cross entropy
-    ### Store values of every H and CV score
-    ### plot results
-    ### Use max and output test score
-    pass
+class MultiNetwork(nn.Module):
+    def __init__(self, input_size, L1, L2):
+        super().__init__()
+        self.hidden_1 = nn.Linear(input_size, L1)
+        self.hidden_1 = nn.Linear(L1, L2)
+        self.out = nn.Linear(L2, 10)
     
-
-    
-    
-
-
-
-
-
-
+    def forward(self, x):
+        x = F.relu(self.hidden_1(x))
+        x = F.relu(self.hidden_2(x))
+        x = self.self.out(x)
+        return x
 
