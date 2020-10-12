@@ -66,10 +66,10 @@ def plot_H_loss(val_losses_dict, H_list):
     fig.subplots_adjust(hspace=0.40)
     if math.ceil(len(val_losses_dict)/2) * 2 > len(val_losses_dict):
         fig.delaxes(axs[math.ceil(len(val_losses_dict)/2)-1][1])
-    plt.show()
 
 def plot_best_losses(best_net_losses_dict):
     fig, axs = plt.subplots(math.ceil(len(best_net_losses_dict)/2), 2)
+    fig.suptitle("BCE Loss", fontsize=24)
     for i, name in enumerate(best_net_losses_dict):
         axs[i//2][i%2].set_title("BCE Losses for {} Dataset".format(name))
         axs[i//2][i%2].set_ylabel("BCE Loss")
@@ -80,29 +80,75 @@ def plot_best_losses(best_net_losses_dict):
             loss_type.append(k)
             losses.append(v)
         x_pos = np.arange(len(losses))
-        axs[i//2][i%2].bar(loss_type, losses, color=["blue", "orange", "red"])
+        axs[i//2][i%2].bar(loss_type, losses, color=["blue", "orange", "red"], zorder=3)
+        axs[i//2][i%2].grid(True, zorder=0)
         
         #axs[i//2][i%2].set_xticklabels(loss_type)
     
     fig.subplots_adjust(hspace=0.40)
     if math.ceil(len(best_net_losses_dict)/2) * 2 > len(best_net_losses_dict):
         fig.delaxes(axs[math.ceil(len(best_net_losses_dict)/2)-1][1])
-    plt.show()
+
+def plot_bn_accs(best_results):
+    fig, axs = plt.subplots(math.ceil(len(best_results)/2), 2)
+    fig.suptitle("Binary Accuracy", fontsize=24)
+    for i, name in enumerate(best_results):
+        axs[i//2][i%2].set_title("Accuracy for {} Dataset".format(name))
+        axs[i//2][i%2].set_ylabel("Accuracy")
+        set_type = ["tran", "validation", "test"]
+        accs = [
+            best_results[name].train_accuracy,
+            best_results[name].val_accuracy,
+            best_results[name].test_accuracy]
+        axs[i//2][i%2].bar(set_type, accs, color=["blue", "orange", "red"],  zorder=3)
+        axs[i//2][i%2].grid(True, zorder=0)
+
+    fig.subplots_adjust(hspace=0.40)
+    if math.ceil(len(best_results)/2) * 2 > len(best_results):
+        fig.delaxes(axs[math.ceil(len(best_results)/2)-1][1])
+
+def plot_roc(roc_dict):
+    pass
 
 def plot_L1_L2_loss(param_val_dict):
-    fig, axs = plt.subplots(1)
-    axs.set_title("CE Validation Loss vs (L1,L2)")
-    axs.set_xlabel("(L1,L2)")
-    axs.set_ylabel("CE Validation Loss")
-    axs.grid(True)
     param_tuples = []
     losses = []
+    accs = []
+    
+    # Get all of the the param combs, values, and accuracies
     for k,v in param_val_dict.items():
         param_tuples.append(str(k))
-        losses.append(v)
-    axs.plot(param_tuples, losses)
-    plt.show()
+        losses.append(v[0])
+        accs.append(v[1])
+    
+    fig, axs = plt.subplots(2)
+    fig.suptitle("Multi-class Classification Neural Network (L1, L2) Hyperparameter Tuning", fontsize=24)
+    axs[0].set_title("CE Validation Loss vs (L1,L2)", fontsize=16)
+    axs[0].set_xlabel("(L1,L2)", fontsize=16)
+    axs[0].set_ylabel("CE Validation Loss", fontsize=16)
+    axs[0].grid(True)
+    axs[0].plot(param_tuples, losses)
 
+    axs[1].set_title("Accuracy vs (L1,L2)", fontsize=16)
+    axs[1].set_xlabel("(L1,L2)", fontsize=16)
+    axs[1].set_ylabel("Accuracy", fontsize=16)
+    axs[1].grid(True)
+    axs[1].plot(param_tuples, accs)
+
+
+def plot_multi_acc(best_results):
+    accs = [
+            best_results.train_accuracy,
+            best_results.val_accuracy,
+            best_results.test_accuracy]
+    set_type = ["tran", "validation", "test"]
+    
+    fig, axs = plt.subplots(1)
+    fig.suptitle("Multi-class Accuracy", fontsize=24)
+    axs.set_ylabel("Accuracy", fontsize=16)
+    axs.bar(set_type, accs, color=["blue", "orange", "red"],  zorder=3)
+    axs.grid(True, zorder=0)
+    
 
 def run_bn():
     # Perform hyperparameter tuning on number for the
@@ -126,6 +172,8 @@ def run_bn():
 
     plot_best_losses(best_net_losses_dict)
     plot_H_loss(val_losses_dict, H_list)
+    plot_bn_accs(best_results)
+    plt.show()
     return best_results
 
 def run_mn():
@@ -133,22 +181,22 @@ def run_mn():
     scale_dataset(image_data)
     L1_list = [50, 75, 100]
     L2_list = [10, 15, 20]
-    trainer = TrainerMulti(image_data, L1_list, L2_list, batch_size=256, patience=10, epochs=100)
-    param_val_dict, results = trainer.cross_validation(num_init=3)
+    #trainer = TrainerMulti(image_data, L1_list, L2_list, batch_size=256, patience=10, epochs=100)
+    trainer = TrainerMulti(image_data, L1_list, L2_list, batch_size=256, patience=10, epochs=1)
+    param_val_dict, results = trainer.cross_validation(num_init=1)
     #print(results)
     #print("MIN VALIDATION LOSS: ", min_val_loss, " BEST PARAMETERS: ", best_params)
     plot_L1_L2_loss(param_val_dict)
+    plot_multi_acc(results)
+    plt.show()
     return results
 
 
 def main():
-    bn_best_results = run_bn()    
+    #bn_best_results = run_bn()
+    #print("\nBinary Classification Results: ", bn_best_results)
     mn_results = run_mn()
-    print("\nBinary Classification Results: ", bn_best_results)
     print("\nMulti-class Classification Results: ", mn_results)
-    
-
-
 
 if __name__ == "__main__":
     main()
