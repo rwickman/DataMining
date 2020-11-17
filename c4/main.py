@@ -2,9 +2,10 @@ import json, re
 from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel, cosine_similarity
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 import numpy as np
 import argparse
+from tqdm import tqdm
 
 stemmer = PorterStemmer()
 def clean_text(text):
@@ -30,12 +31,12 @@ def clean_text(text):
 
 def top_pr(args, proximity_matrix, cosine_threshold):
     num_nodes = proximity_matrix.shape[0]
-
     # Create sparse-encoding of the adjacency matrix
-    adj_matrix = csr_matrix(proximity_matrix.shape)
+    adj_matrix = lil_matrix(proximity_matrix.shape)
     pr_scores = np.repeat(1, num_nodes)
     num_edges = 0
-    for i in range(num_nodes):
+    print("Creating graph...")
+    for i in tqdm(range(num_nodes)):
         for j, sim in enumerate(proximity_matrix[i]):
             # Don't create self-cycles
             if i == j:
@@ -52,17 +53,10 @@ def top_pr(args, proximity_matrix, cosine_threshold):
 
     # Create transition probability
     M = adj_matrix.multiply(1/out_degrees).T
-    #print(M)
-    for i in range(args.pr_iter):
-        print(i)
+    print("Running PageRank...")
+    for i in tqdm(range(args.pr_iter)):
         pr_scores = args.alpha * (1/num_nodes) + (1-args.alpha) * M.dot(pr_scores)
-        #print(pr_scores)
-
-    # Get the papers with higher PR score
-    #rank_by_pr = np.argsort(pr_scores)
-    
-    
-   
+            
     return pr_scores, num_edges
 
 
@@ -76,11 +70,13 @@ def create_results(args):
     corpus = []
     paper_titles = []
     #for i in range(len(papers)):
+    print("Tokenizing text...")
     for i in range(len(papers)):
         corpus.append(clean_text(papers[i]["abstract"]))
         paper_titles.append(papers[i]["title"])
 
     # Fit TF-IDF on corpus
+    print("Fitting TF-IDF on corpus...")
     vectorizer = TfidfVectorizer(tokenizer=lambda x: x, lowercase=False)
     X = vectorizer.fit_transform(corpus)
 
@@ -90,8 +86,10 @@ def create_results(args):
     # Compute PageRank and output results
     with open(args.output, "w") as f:
         for threshold in args.thetas:
-            print(threshold)
+            print("Creating output for theta =", threshold)
             pr_scores, num_edges = top_pr(args, proximity_matrix, threshold)
+
+            # Sort by PR score and title
             ranked_papers = sorted(zip(pr_scores, paper_titles), key=lambda x: (-x[0], x[1]) )
             f.write("θ = {}, |V| = {}, |E| = {},\n".format(threshold, proximity_matrix.shape[0], num_edges))
             for i, top_pair in enumerate(ranked_papers[:args.num_top]):
@@ -111,7 +109,7 @@ if __name__ == "__main__":
             help="Number of top PageRank title results to write.")
     parser.add_argument("--thetas", type=float, nargs="*", default=[0.25,0.5,0.75],
             help="Cosine threshold to create an edge for graph.")
-    parser.add_argument("--output", default="results.txt",
+    parser.add_argument("--output", default="output.txt",
             help="Output path/filename.")
     parser.add_argument("--input", default="CovidPaper.json",
             help="Input JSON path/filename.")
