@@ -1,0 +1,33 @@
+θ = 0.25, |V| = 17657, |E| = 223940,
+Parallel Stochastic Optimization Framework for Large-Scale Non-Convex  Stochastic Problems;
+An analysis on the use of autoencoders for representation learning:  fundamentals, learning task case studies, explainability and challenges;
+Efficient Two-Step Adversarial Defense for Deep Neural Networks;
+The Attack Generator: A Systematic Approach Towards Constructing  Adversarial Attacks;
+Relevant based structure learning for feature selection;
+Domain Adaptation on Graphs by Learning Graph Topologies: Theoretical  Analysis and an Algorithm;
+Return of the features. Efficient feature selection and interpretation  for photometric redshifts;
+Threat of Adversarial Attacks on Deep Learning in Computer Vision: A  Survey;
+Quantum Adversarial Machine Learning;
+Investigating Resistance of Deep Learning-based IDS against Adversaries  using min-max Optimization;
+θ = 0.5, |V| = 17657, |E| = 1922,
+Machine learning methods in quantum computing theory;
+Quantum Wasserstein Generative Adversarial Networks;
+Enhanced Quantum Key Distribution using Hybrid Channels and Natural  Random Numbers;
+Efficient Two-Step Adversarial Defense for Deep Neural Networks;
+Quantum machine learning and quantum biomimetics: A perspective;
+Learning with Submodular Functions: A Convex Optimization Perspective;
+Learning How to Communicate in the Internet of Things: Finite Resources  and Heterogeneity;
+A rigorous and robust quantum speed-up in supervised machine learning;
+Convex Density Constraints for Computing Plausible Counterfactual  Explanations;
+Probabilistic Simulation of Quantum Circuits with the Transformer;
+θ = 0.75, |V| = 17657, |E| = 166,
+$\Pi-$nets: Deep Polynomial Neural Networks;
+3D CNN-based classification using sMRI and MD-DTI images for Alzheimer  disease studies;
+3D Inception-based CNN with sMRI and MD-DTI data fusion for Alzheimer's  Disease diagnostics;
+A Machine Learning Pipeline Stage for Adaptive Frequency Adjustment;
+A Model for Learned Bloom Filters and Related Structures;
+A Model for Learned Bloom Filters, and Optimizing by Sandwiching;
+A Review of Single-Source Deep Unsupervised Visual Domain Adaptation;
+A Unified Framework of Robust Submodular Optimization;
+A Unified Learning Platform for Dynamic Frequency Scaling in Pipelined  Processors;
+Active Sensing as Bayes-Optimal Sequential Decision Making;

@@ -1,0 +1,33 @@
+θ = 0.25, |V| = 1722, |E| = 5838,
+Efficient techniques for mining spatial databases;
+Relevant based structure learning for feature selection;
+Tell Me Something I Don't Know: Randomization Strategies for Iterative  Data Mining;
+A Study on Feature Selection Techniques in Educational Data Mining;
+Review of Swarm Intelligence-based Feature Selection Methods;
+A Noise Addition Scheme in Decision Tree for Privacy Preserving Data  Mining;
+Survey of Network Intrusion Detection Methods from the Perspective of  the Knowledge Discovery in Databases Process;
+Multi-source Data Mining for e-Learning;
+Data Mining: A prediction Technique for the workers in the PR Department  of Orissa (Block and Panchayat);
+Feature Selection: A Data Perspective;
+θ = 0.5, |V| = 1722, |E| = 158,
+A Survey on Preprocessing Methods for Web Usage Data;
+A Survey of Multi-View Representation Learning;
+Multi-View Fuzzy Logic System with the Cooperation between Visible and  Hidden Views;
+A Fuzzy Clustering Based Approach for Mining Usage Profiles from Web Log  Data;
+Discovering More Accurate Frequent Web Usage Patterns;
+Web Usage mining framework for Data Cleaning and IP address  Identification;
+Event Centric Modeling Approach in Colocation Pattern Snalysis from  Spatial Data;
+Maximal frequent itemset generation using segmentation approach;
+Using Association Rules for Better Treatment of Missing Values;
+A CHAID Based Performance Prediction Model in Educational Data Mining;
+θ = 0.75, |V| = 1722, |E| = 40,
+The data mining II: An analysis of 33 eclipsing binary light-curves  observed by the INTEGRAL/OMC;
+A High-Performance Parallel Algorithm for Nonnegative Matrix  Factorization;
+Analysis of data in the form of graphs;
+Attribute Oriented Induction with simple select SQL statement;
+Classification rule with simple select SQL statement;
+Coron : Plate-forme d'extraction de connaissances dans les bases de  donn\'ees;
+Data mining when each data point is a network;
+Decentralized Online Big Data Classification - a Bandit Framework;
+Distributed Online Big Data Classification Using Context Information;
+Fast Algorithms for the Maximum Clique Problem on Massive Graphs with  Applications to Overlapping Community Detection;

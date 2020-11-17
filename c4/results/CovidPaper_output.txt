@@ -1,0 +1,33 @@
+θ = 0.25, |V| = 323, |E| = 2186,
+What Can We Estimate from Fatality and Infectious Case Data using the  Susceptible-Infected-Removed (SIR) model? A case Study of Covid-19 Pandemic;
+Modeling and forecasting the early evolution of the Covid-19 pandemic in  Brazil;
+Modelling Covid-19 epidemic in Mexico, Finland and Iceland;
+Morphology and numerical characteristics of epidemic curves for  SARS-Cov-II using Moyal distribution;
+Common trends in the epidemic of Covid-19 disease;
+Modelling the spread of Covid19 in Italy using a revised version of the  SIR model;
+Excess deaths, baselines, Z-scores, P-scores and peaks;
+A regime switching on Covid19 analysis and prediction in Romania;
+Coronavirus Covid-19 spreading in Italy: optimizing an epidemiological  model with dynamic social distancing through Differential Evolution;
+Solvable delay model for epidemic spreading: the case of Covid-19 in  Italy;
+θ = 0.5, |V| = 323, |E| = 6,
+A predictive model for Covid-19 spread applied to eight US states;
+Branching stochastic processes as models of Covid-19 epidemic  development;
+Covid-Transformer: Detecting COVID-19 Trending Topics on Twitter Using  Universal Sentence Encoder;
+Deep-COVID: Predicting COVID-19 From Chest X-Ray Images Using Deep  Transfer Learning;
+Stochastic modeling and estimation of COVID-19 population dynamics;
+US faces endemic Covid-19 infections and deaths; ways to stop the  pandemic;
+"Stay Nearby or Get Checked": A Covid-19 Lockdown Exit Strategy;
+(Unintended) Consequences of export restrictions on medical goods during  the Covid-19 pandemic;
+A Bayesian - Deep Learning model for estimating Covid-19 evolution in  Spain;
+A Compressed Sensing Approach to Group-testing for COVID-19 Detection;
+θ = 0.75, |V| = 323, |E| = 0,
+"Stay Nearby or Get Checked": A Covid-19 Lockdown Exit Strategy;
+(Unintended) Consequences of export restrictions on medical goods during  the Covid-19 pandemic;
+A Bayesian - Deep Learning model for estimating Covid-19 evolution in  Spain;
+A Compressed Sensing Approach to Group-testing for COVID-19 Detection;
+A Conjectural Experiment to Observe the Effect of Conditional  locked-down in an Epidemic;
+A Data-Driven Control-Theoretic Paradigm for Pandemic Mitigation with  Application to Covid-19;
+A Deep Q-learning/genetic Algorithms Based Novel Methodology For  Optimizing Covid-19 Pandemic Government Actions;
+A First Look at Android Applications in Google Play related to Covid-19;
+A Fully Distributed, Privacy Respecting Approach for Back-tracking of  Potentially Infectious Contacts;
+A Model for Optimizing the Health and Economic Impacts of Covid-19 under  Social Distancing Measures; A Study for the Number of Passengers and their  Seating Arrangements in Aircrafts;
